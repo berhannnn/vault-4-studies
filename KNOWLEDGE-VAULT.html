@@ -1,0 +1,2459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning Vault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: ribbon | file explorer | tabbed note pane | properties & links panel. Obsidian-like workspace, tuned for studying. */
+:root{
+  --bg:#ffffff;
+  --bg-2:#f6f5f8;
+  --bg-3:#ecebf0;
+  --hover:rgba(30,20,60,.06);
+  --border:#e1dfe7;
+  --text:#24222b;
+  --muted:#6b6878;
+  --faint:#9a97a6;
+  --accent:#6f4fd8;
+  --accent-soft:rgba(111,79,216,.12);
+  --link:#5b3fc4;
+  --code-bg:#f1eff5;
+  --s-new:#a3a0ae;
+  --s-learn:#c98a14;
+  --s-done:#2f9e6a;
+  --danger:#c93c3c;
+  --g1:#6f4fd8;--g2:#d0632b;--g3:#2f8fb3;--g4:#2f9e6a;--g5:#c0418a;--g6:#8a8696;
+  --shadow:0 8px 30px rgba(20,10,40,.14);
+  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-display:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1e1e21;--bg-2:#26262a;--bg-3:#19191c;--hover:rgba(255,255,255,.06);--border:#34343a;
+    --text:#dcdbe2;--muted:#a09dab;--faint:#6d6a78;--accent:#9a7bff;--accent-soft:rgba(154,123,255,.16);
+    --link:#b39dff;--code-bg:#2b2b31;--s-new:#6d6a78;--s-learn:#e0a335;--s-done:#4cc38a;--danger:#ef6b6b;
+    --g1:#9a7bff;--g2:#f08a4b;--g3:#4fb4d8;--g4:#4cc38a;--g5:#e06aae;--g6:#8f8b9c;
+    --shadow:0 10px 36px rgba(0,0,0,.5);color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1e1e21;--bg-2:#26262a;--bg-3:#19191c;--hover:rgba(255,255,255,.06);--border:#34343a;
+  --text:#dcdbe2;--muted:#a09dab;--faint:#6d6a78;--accent:#9a7bff;--accent-soft:rgba(154,123,255,.16);
+  --link:#b39dff;--code-bg:#2b2b31;--s-new:#6d6a78;--s-learn:#e0a335;--s-done:#4cc38a;--danger:#ef6b6b;
+  --g1:#9a7bff;--g2:#f08a4b;--g3:#4fb4d8;--g4:#4cc38a;--g5:#e06aae;--g6:#8f8b9c;
+  --shadow:0 10px 36px rgba(0,0,0,.5);color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 var(--font-ui);overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.i.sm{width:15px;height:15px}
+
+.app{display:grid;grid-template-columns:44px auto minmax(0,1fr) auto;height:100%}
+.ribbon{background:var(--bg-3);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px}
+.ribbon .sp{flex:1}
+.icon-btn{width:32px;height:32px;display:grid;place-items:center;border-radius:6px;color:var(--muted)}
+.icon-btn:hover{background:var(--hover);color:var(--text)}
+.icon-btn.on{color:var(--accent)}
+
+.sidebar{width:272px;background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;min-height:0}
+.sidebar.right{border-right:0;border-left:1px solid var(--border);width:280px}
+.sidebar[hidden]{display:none}
+.side-head{display:flex;align-items:center;gap:2px;padding:6px 8px;border-bottom:1px solid var(--border);min-height:40px}
+.side-head .title{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-left:6px;flex:1}
+.side-body{flex:1;overflow:auto;padding:6px 6px 12px;min-height:0}
+
+/* tree */
+.tree-folder>.row,.tree-note{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:5px;cursor:pointer;color:var(--muted);user-select:none;min-height:26px}
+.tree-folder>.row:hover,.tree-note:hover{background:var(--hover);color:var(--text)}
+.tree-note.active{background:var(--accent-soft);color:var(--text)}
+.tree-folder>.row{color:var(--text);font-weight:500}
+.tree-folder .chev{transition:transform .15s;color:var(--faint)}
+.tree-folder.open>.row .chev{transform:rotate(90deg)}
+.tree-children{margin-left:15px;border-left:1px solid var(--border);padding-left:4px}
+.tree-folder:not(.open)>.tree-children{display:none}
+.tree-note .name,.tree-folder .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--s-new)}
+.dot.learning{background:var(--s-learn)}
+.dot.mastered{background:var(--s-done)}
+.ext{font:500 10px/1 var(--font-mono);padding:3px 4px;border-radius:3px;background:var(--bg-3);color:var(--muted);text-transform:uppercase}
+.prog{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;font-weight:400}
+.drop-target{background:var(--accent-soft)!important;outline:1px dashed var(--accent)}
+.vault-foot{border-top:1px solid var(--border);padding:10px 14px;display:grid;gap:6px}
+.vault-foot .vn{font-weight:600;display:flex;justify-content:space-between;align-items:baseline}
+.vault-foot .vn span{font-weight:400;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{height:5px;border-radius:3px;background:var(--bg-3);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.bar .b-done{background:var(--s-done)}.bar .b-learn{background:var(--s-learn)}
+
+/* search */
+.search-box{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 8px;margin:4px 2px 8px}
+.search-box input{border:0;outline:0;background:none;flex:1;min-width:0}
+.result{padding:6px 8px;border-radius:5px;cursor:pointer}
+.result:hover{background:var(--hover)}
+.result .rt{font-weight:500}
+.result .rs{font-size:12px;color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.result mark{background:var(--accent-soft);color:var(--text);border-radius:2px}
+.empty-note{color:var(--faint);font-size:13px;padding:8px}
+
+/* main */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg);position:relative}
+.tabbar{height:40px;background:var(--bg-2);display:flex;align-items:flex-end;padding:0 6px;gap:2px;border-bottom:1px solid var(--border);overflow-x:auto;flex:none;scrollbar-width:none}
+.tab{display:flex;align-items:center;gap:6px;height:32px;padding:0 6px 0 12px;border-radius:7px 7px 0 0;max-width:200px;min-width:90px;color:var(--muted);cursor:pointer;flex:none;position:relative}
+.tab:hover{background:var(--hover)}
+.tab.active{background:var(--bg);color:var(--text);box-shadow:0 0 0 1px var(--border);clip-path:inset(-1px -1px 0 -1px)}
+.tab .tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.tab .x{width:20px;height:20px;border-radius:4px;display:grid;place-items:center;opacity:.6}
+.tab .x:hover{background:var(--hover);opacity:1}
+.tab-add{height:32px;width:32px;display:grid;place-items:center;color:var(--muted);border-radius:6px;flex:none}
+.tab-add:hover{background:var(--hover)}
+.view-header{height:42px;display:flex;align-items:center;padding:0 10px 0 18px;gap:6px;flex:none}
+.crumbs{flex:1;min-width:0;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crumbs b{color:var(--text);font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:13px;border:1px solid var(--border);font-size:12px;font-weight:500;color:var(--muted)}
+.pill:hover{border-color:var(--faint);color:var(--text)}
+.pill.learning{color:var(--s-learn);border-color:color-mix(in srgb,var(--s-learn) 45%,transparent)}
+.pill.mastered{color:var(--s-done);border-color:color-mix(in srgb,var(--s-done) 45%,transparent)}
+.view-content{flex:1;overflow:auto;position:relative;min-height:0}
+.doc{max-width:740px;margin:0 auto;padding:12px 36px 140px;position:relative}
+.inline-title{display:block;width:100%;border:0;outline:0;background:none;font-size:30px;font-weight:700;line-height:1.2;letter-spacing:-.01em;padding:0;margin:8px 0 14px;text-wrap:balance}
+.editor{display:block;width:100%;border:0;outline:0;resize:none;background:none;font:15.5px/1.7 var(--font-ui);color:var(--text);min-height:60vh;overflow:hidden;padding:0;tab-size:4}
+
+/* rendered markdown */
+.md{font-size:15.5px;line-height:1.7}
+.md>*:first-child{margin-top:0}
+.md h1,.md h2,.md h3,.md h4{line-height:1.3;text-wrap:balance;margin:1.6em 0 .5em}
+.md h1{font-size:1.6em}.md h2{font-size:1.32em}.md h3{font-size:1.12em}.md h4{font-size:1em}
+.md p{margin:.6em 0}
+.md a{color:var(--link);text-decoration:none}
+.md a:hover{text-decoration:underline}
+.md a.unresolved{opacity:.6;text-decoration:underline dotted}
+.md a.tag{background:var(--accent-soft);padding:1px 7px;border-radius:10px;font-size:.88em}
+.md code{font:.86em var(--font-mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
+.md pre{background:var(--code-bg);padding:12px 14px;border-radius:7px;overflow-x:auto;line-height:1.55}
+.md pre code{background:none;padding:0;font-size:13px}
+.md blockquote{margin:.8em 0;padding:2px 0 2px 16px;border-left:3px solid var(--accent);color:var(--muted)}
+.md hr{border:0;border-top:1px solid var(--border);margin:1.6em 0}
+.md ul,.md ol{padding-left:1.5em;margin:.5em 0}
+.md li{margin:.15em 0}
+.md li.task{list-style:none;margin-left:-1.4em}
+.md li.task input{margin:0 8px 0 0;vertical-align:-2px;accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
+.md li.task.done{color:var(--faint);text-decoration:line-through}
+.md mark{background:color-mix(in srgb,var(--s-learn) 30%,transparent);color:inherit;padding:0 2px;border-radius:2px}
+.md img{max-width:100%;border-radius:6px}
+.table-wrap{overflow-x:auto;margin:.8em 0}
+.md table{border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.md th,.md td{border:1px solid var(--border);padding:6px 12px;text-align:left}
+.md th{background:var(--bg-2);font-weight:600}
+.callout{--c:var(--g3);margin:1em 0;border-radius:7px;padding:10px 14px;background:color-mix(in srgb,var(--c) 10%,transparent);border-left:3px solid var(--c)}
+.callout[data-callout="tip"],.callout[data-callout="success"]{--c:var(--g4)}
+.callout[data-callout="warning"],.callout[data-callout="caution"]{--c:var(--g2)}
+.callout[data-callout="example"]{--c:var(--g1)}
+.callout[data-callout="question"]{--c:var(--g5)}
+.callout-title{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--c)}
+.callout-content>*:last-child{margin-bottom:0}
+.callout-content>*:first-child{margin-top:.3em}
+.props{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;font-size:13px;padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:14px}
+.props dt{color:var(--muted)}.props dd{margin:0}
+.embed-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px}
+
+/* file view */
+.file-view{padding:24px;display:grid;gap:14px;justify-items:center}
+.file-view img,.file-view video{max-width:100%;max-height:75vh;border-radius:8px}
+.file-view iframe{width:100%;height:78vh;border:1px solid var(--border);border-radius:8px;background:#fff}
+.file-meta{color:var(--muted);font-size:13px;display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.file-meta a{color:var(--link)}
+.file-text{width:100%;max-width:900px;background:var(--code-bg);border-radius:8px;padding:14px;font:13px/1.55 var(--font-mono);white-space:pre-wrap;overflow:auto;max-height:75vh}
+
+/* empty state */
+.empty{height:100%;display:grid;place-items:center;text-align:center;color:var(--muted)}
+.empty h2{color:var(--text);font-size:20px;margin:0 0 14px}
+.empty .acts{display:grid;gap:6px}
+.empty .acts button{color:var(--link)}
+.empty .acts button:hover{text-decoration:underline}
+.empty kbd,.kbd{font:11px var(--font-mono);border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;padding:1px 5px;color:var(--muted)}
+
+/* right panel */
+.panel-sec{padding:10px 8px 6px}
+.panel-sec+.panel-sec{border-top:1px solid var(--border)}
+.panel-sec h4{margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+.panel-sec h4 span{font-variant-numeric:tabular-nums;font-weight:500}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.seg button{padding:6px 4px;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:5px}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--text);font-weight:500}
+.link-item{display:block;padding:4px 8px;border-radius:5px;cursor:pointer;color:var(--text);font-size:13px}
+.link-item:hover{background:var(--hover)}
+.link-item small{display:block;color:var(--faint);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.link-item.unres{color:var(--faint)}
+.outline-item{display:block;padding:3px 8px;border-radius:5px;cursor:pointer;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.outline-item:hover{background:var(--hover);color:var(--text)}
+.track-btn{width:100%;padding:7px;border:1px dashed var(--border);border-radius:7px;color:var(--muted);font-size:12.5px}
+.track-btn:hover{border-color:var(--accent);color:var(--text)}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:12.5px;margin-top:10px}
+.kv dt{color:var(--faint)}.kv dd{margin:0;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.statusbar{position:absolute;right:0;bottom:0;display:flex;gap:14px;align-items:center;padding:4px 12px;font-size:12px;color:var(--muted);background:var(--bg-2);border:1px solid var(--border);border-right:0;border-bottom:0;border-top-left-radius:8px;font-variant-numeric:tabular-nums;z-index:5}
+.sync{display:inline-flex;align-items:center;gap:6px}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.sync.ok i{background:var(--s-done)}.sync.warn i{background:var(--s-learn)}.sync.bad i{background:var(--danger)}
+
+/* graph */
+.graph-wrap{position:absolute;inset:0}
+.graph-wrap canvas{display:block;width:100%;height:100%;cursor:grab}
+.graph-wrap canvas.dragging{cursor:grabbing}
+.graph-legend{position:absolute;left:14px;top:12px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;display:grid;gap:4px;color:var(--muted)}
+.graph-legend div{display:flex;align-items:center;gap:8px}
+.graph-legend i{width:9px;height:9px;border-radius:50%}
+.graph-hint{position:absolute;left:14px;bottom:12px;font-size:12px;color:var(--faint)}
+
+/* home */
+.home-wrap{position:relative;min-height:100%}
+.home{max-width:1140px;margin:0 auto;padding:22px 36px 120px;display:grid;gap:30px}
+.hero{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--border);background:radial-gradient(120% 140% at 85% 40%,var(--accent-soft),transparent 60%),var(--bg-2);display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);gap:24px;padding:40px 44px;min-height:360px;container-type:inline-size}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.hero>*:not(canvas){position:relative;z-index:1}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-variant-numeric:tabular-nums}
+.display{font-family:var(--font-display);font-size:clamp(40px,7.4cqi,78px);font-weight:800;line-height:.92;letter-spacing:-.035em;margin:14px 0 22px;text-wrap:balance;font-variation-settings:"opsz" 96}
+.display em{font-style:normal;color:var(--accent)}
+.next-card{display:grid;grid-template-columns:4px 1fr;gap:0 16px;max-width:520px;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:14px;padding:16px 18px 16px 0;overflow:hidden}
+.next-card .stripe{border-radius:0 3px 3px 0;background:var(--mc,var(--accent))}
+.next-card .lbl{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.next-card h3{font-family:var(--font-display);font-size:26px;font-weight:700;letter-spacing:-.02em;margin:4px 0 4px;line-height:1.1}
+.next-card p{margin:0 0 12px;color:var(--muted);font-size:13.5px;max-width:58ch}
+.hero-acts{display:flex;gap:8px;flex-wrap:wrap}
+.cta{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:9px;background:var(--accent);color:#fff;font-weight:600}
+.cta:hover{filter:brightness(1.08)}
+.ghost{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:9px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.ghost:hover{border-color:var(--faint)}
+.ring-box{display:grid;align-content:center;justify-items:center;gap:14px}
+.ring{position:relative;width:200px;height:200px;border-radius:50%;background:color-mix(in srgb,var(--bg-2) 78%,transparent);backdrop-filter:blur(3px);box-shadow:0 0 0 18px color-mix(in srgb,var(--bg-2) 40%,transparent)}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .c{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .c b{font-family:var(--font-display);font-size:54px;font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.ring .c span{font-size:12px;color:var(--muted)}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;flex-wrap:wrap;justify-content:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 12px}
+.sec-h h2{font-family:var(--font-display);font-size:24px;font-weight:700;letter-spacing:-.02em;margin:0}
+.sec-h span{color:var(--muted);font-size:13px}
+.mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.mod{--mc:var(--accent);position:relative;text-align:left;border:1px solid var(--border);border-radius:16px;background:var(--bg-2);padding:18px 18px 16px;display:grid;gap:10px;transition:transform .18s,border-color .18s,box-shadow .18s;overflow:hidden}
+.mod::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--mc)}
+.mod:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--mc) 55%,var(--border));box-shadow:var(--shadow)}
+.mod .num{font:600 12px var(--font-mono);color:var(--mc)}
+.mod h3{font-family:var(--font-display);font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:0}
+.mod .meta{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mod .next{font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:center;border-top:1px solid var(--border);padding-top:10px;margin-top:2px}
+.mod .next b{color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mod.add{border-style:dashed;background:none;place-content:center;justify-items:center;text-align:center;color:var(--muted);min-height:150px}
+.mod.add::before{display:none}
+.mod.add:hover{color:var(--text)}
+.home-row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:14px}
+.panel{border:1px solid var(--border);border-radius:16px;background:var(--bg-2);padding:18px}
+.recent{display:grid;gap:2px}
+.recent button{display:grid;grid-template-columns:10px 1fr auto;gap:12px;align-items:center;text-align:left;padding:8px 10px;border-radius:8px}
+.recent button:hover{background:var(--hover)}
+.recent i{width:8px;height:8px;border-radius:50%}
+.recent small{color:var(--faint);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.recent .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dropzone{display:grid;place-items:center;text-align:center;gap:6px;width:100%;min-height:190px;border:2px dashed color-mix(in srgb,var(--accent) 45%,var(--border));border-radius:14px;color:var(--muted);padding:20px;transition:background .15s}
+.dropzone:hover{background:var(--accent-soft);color:var(--text)}
+.dropzone b{font-family:var(--font-display);font-size:20px;color:var(--text);letter-spacing:-.01em}
+.dropzone svg{width:30px;height:30px;color:var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.stats div{padding:16px 18px;background:var(--bg-2)}
+.stats div+div{border-left:1px solid var(--border)}
+.stats b{display:block;font-family:var(--font-display);font-size:30px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.1}
+.stats span{font-size:12.5px;color:var(--muted)}
+@media (max-width:860px){.hero{grid-template-columns:1fr;padding:30px 24px}.ring-box{justify-items:start}.home-row{grid-template-columns:1fr}.home{padding:16px 18px 110px}.stats{grid-template-columns:repeat(2,1fr)}.stats div:nth-child(3){border-left:0}.stats div:nth-child(n+3){border-top:1px solid var(--border)}}
+
+/* overlays */
+.drop-overlay{position:fixed;inset:0;z-index:50;display:none;place-items:center;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(2px);pointer-events:none}
+.drop-overlay.show{display:grid}
+.drop-card{border:2px dashed var(--accent);border-radius:14px;padding:30px 44px;text-align:center;background:var(--bg-2);box-shadow:var(--shadow)}
+.drop-card b{display:block;font-size:17px;margin:8px 0 4px}
+.drop-card span{color:var(--muted);font-size:13px}
+.modal-bg{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.35);display:flex;justify-content:center;align-items:flex-start;padding-top:12vh}
+.modal{width:min(560px,calc(100% - 32px));background:var(--bg-2);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+.modal input.q{width:100%;border:0;border-bottom:1px solid var(--border);background:none;outline:0;padding:14px 16px;font-size:16px}
+.modal .list{max-height:52vh;overflow:auto;padding:6px}
+.modal .opt{padding:7px 10px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;gap:12px}
+.modal .opt small{color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modal .opt.sel{background:var(--accent-soft)}
+.modal .foot{border-top:1px solid var(--border);padding:7px 14px;font-size:12px;color:var(--faint);display:flex;gap:14px}
+.dialog{padding:18px 18px 14px}
+.dialog h3{margin:0 0 6px;font-size:16px}
+.dialog p{margin:0 0 12px;color:var(--muted)}
+.dialog input{width:100%;border:1px solid var(--border);border-radius:6px;background:var(--bg);padding:8px 10px;outline:0;margin-bottom:14px}
+.dialog input:focus{border-color:var(--accent)}
+.dialog .btns{display:flex;justify-content:flex-end;gap:8px}
+.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.ctx{position:fixed;z-index:70;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);padding:4px;min-width:180px}
+.ctx button{display:flex;width:100%;padding:6px 10px;border-radius:5px;text-align:left;gap:8px;align-items:center}
+.ctx button:hover{background:var(--hover)}
+.ctx button.danger{color:var(--danger)}
+.ctx hr{border:0;border-top:1px solid var(--border);margin:4px 0}
+.suggest{position:absolute;z-index:20;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);padding:4px;min-width:240px;max-width:360px}
+.suggest div{padding:5px 10px;border-radius:5px;cursor:pointer;font-size:13.5px;display:flex;justify-content:space-between;gap:10px}
+.suggest div small{color:var(--faint)}
+.suggest div.sel{background:var(--accent-soft)}
+.toasts{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);display:grid;gap:8px;z-index:80;justify-items:center}
+.toast{background:var(--text);color:var(--bg);padding:8px 14px;border-radius:7px;font-size:13px;box-shadow:var(--shadow);max-width:90vw}
+
+@media (max-width:1000px){.sidebar.right{position:absolute;right:0;top:0;bottom:0;z-index:30;box-shadow:var(--shadow)}}
+@media (max-width:700px){
+  .sidebar.left{position:absolute;left:44px;top:0;bottom:0;z-index:30;box-shadow:var(--shadow)}
+  .doc{padding:8px 18px 120px}
+  .statusbar .wc{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <nav class="ribbon" aria-label="Ribbon">
+    <button class="icon-btn" id="rb-left" title="Toggle file explorer" aria-label="Toggle file explorer"></button>
+    <button class="icon-btn" id="rb-switch" title="Quick switcher (Ctrl/Cmd+P)" aria-label="Quick switcher"></button>
+    <button class="icon-btn" id="rb-graph" title="Open graph view (Ctrl/Cmd+G)" aria-label="Open graph view"></button>
+    <button class="icon-btn" id="rb-new" title="New note" aria-label="New note"></button>
+    <button class="icon-btn" id="rb-import" title="Import notes or files" aria-label="Import notes or files"></button>
+    <div class="sp"></div>
+    <button class="icon-btn" id="rb-home" title="Home" aria-label="Home"></button>
+    <button class="icon-btn" id="rb-right" title="Toggle right panel" aria-label="Toggle right panel"></button>
+  </nav>
+
+  <aside class="sidebar left" id="left">
+    <div class="side-head">
+      <button class="icon-btn" id="lt-files" title="Files" aria-label="Files"></button>
+      <button class="icon-btn" id="lt-search" title="Search" aria-label="Search"></button>
+      <span class="title" id="left-title">Modules</span>
+      <button class="icon-btn" id="lt-newnote" title="New note" aria-label="New note"></button>
+      <button class="icon-btn" id="lt-newfolder" title="New folder" aria-label="New folder"></button>
+    </div>
+    <div class="side-body" id="left-body"></div>
+    <div class="vault-foot" id="vault-foot"></div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="tabbar" id="tabbar" role="tablist"></div>
+    <div class="view-header" id="view-header"></div>
+    <div class="view-content" id="view"></div>
+    <div class="statusbar" id="statusbar"></div>
+  </main>
+
+  <aside class="sidebar right" id="right" aria-label="Note details">
+    <div class="side-head"><span class="title">This note</span></div>
+    <div class="side-body" id="right-body"></div>
+  </aside>
+</div>
+
+<div class="drop-overlay" id="drop-overlay"><div class="drop-card"><svg class="i" viewBox="0 0 24 24" style="width:30px;height:30px;color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><b id="drop-title">Drop to add to your vault</b><span id="drop-sub">.md and .txt become notes. Images, PDFs and other files become attachments.</span></div></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<input type="file" id="file-input" multiple hidden>
+
+<script type="text/plain" id="seed">
+@@ Start Here
+> [!tip] Your study vault
+> Every **module** is a folder on the left. Every note inside it is a **concept** you're meant to learn. Click one to open it, follow the purple links to related ideas, and mark your progress as you go.
+
+## How to use it
+1. Open a module's hub note, like [[Discrete Mathematics]], to see the suggested order.
+2. Read a concept, then work through its **Check yourself** list. Tick boxes as you finish them.
+3. Set the concept's status in the top-right: *Not started*, *Learning* or *Mastered*. The dot in the file tree and the progress bar under each module follow along.
+4. Open the **graph view** to see how concepts connect across modules.
+
+## Bring your own material
+- **Drag files in from your computer.** Drop them anywhere on the page, or onto a folder in the tree to put them there.
+- `.md` and `.txt` files become notes you can edit. Images, PDFs and anything else become attachments you can open from the tree.
+- You can drop a whole folder, including an existing Obsidian vault. Its folder structure is kept.
+- Drop an image straight into a note while editing and it's embedded where your cursor is.
+- Your own folder is [[Scratchpad|My Notes]], but you can make new folders anywhere.
+
+## Writing notes
+- Link to any note with `[[Note name]]`. Typing `[[` suggests matches.
+- Highlight with `==text==`, tag with `#revision`, and make a checklist with `- [ ]`.
+- Callouts work like Obsidian: start a quote with `> [!tip]`, `> [!warning]` or `> [!example]`.
+
+## Shortcuts
+| Action | Keys |
+| --- | --- |
+| Quick switcher | Ctrl/Cmd + P or K |
+| Toggle reading / editing | Ctrl/Cmd + E |
+| Graph view | Ctrl/Cmd + G |
+| New note | Alt + N |
+
+## Modules
+- [[Discrete Mathematics]]
+- [[Programming Fundamentals]]
+- [[Data Structures]]
+- [[Algorithms]]
+
+@@ Discrete Mathematics/Discrete Mathematics
+The maths of separate, countable things: the language computer science is written in. Sets give you a way to describe collections of data, logic gives you a way to reason about programs, and relations and functions describe how data connects.
+
+## Suggested order
+1. [[Set Notation]]
+2. [[Subsets]]
+3. [[Power Sets]]
+4. [[Set Operations]]
+5. [[Cardinality]]
+6. [[Number Systems]]
+7. [[Propositional Logic]]
+8. [[Relations]]
+9. [[Functions (Maths)]]
+
+> [!example] Where it shows up later
+> Database queries are set operations. A graph is a set of vertices plus a relation on them ([[Graphs]]). Proving an algorithm correct uses logic and induction.
+
+#discrete-maths
+
+@@ Discrete Mathematics/Set Notation
+A **set** is an unordered collection of distinct objects, called its *elements* or *members*.
+
+## Ways to write a set
+- **Roster (listing):** `A = {1, 2, 3}`
+- **Set-builder:** `B = { x ∈ ℤ | x > 0 }`, read as "the set of integers x such that x is greater than 0"
+- **Empty set:** `∅` or `{}`, the set with no elements
+
+## Membership
+- `x ∈ A` means x is an element of A
+- `x ∉ A` means x is not an element of A
+
+> [!tip] Order and repetition don't matter
+> `{1, 2, 3} = {3, 1, 2} = {1, 1, 2, 3}`. A set only records *whether* something is in it.
+
+## Watch out
+`∅` and `{∅}` are different. The first has no elements; the second has one element, which happens to be the empty set.
+
+## Check yourself
+- [ ] Write the even natural numbers below 10 in roster form
+- [ ] Write the same set in set-builder notation
+- [ ] Is `∅ ∈ {∅}` true? Is `∅ = {∅}` true?
+
+Related: [[Subsets]], [[Cardinality]], [[Number Systems]]
+#discrete-maths #sets
+
+@@ Discrete Mathematics/Subsets
+A is a **subset** of B, written `A ⊆ B`, if every element of A is also an element of B.
+
+- **Proper subset:** `A ⊂ B` means `A ⊆ B` and `A ≠ B`, so B has at least one element A doesn't.
+- **Superset:** `B ⊇ A` says the same thing as `A ⊆ B` from the other side.
+
+## Facts to remember
+- `∅ ⊆ A` for every set A, because there's nothing in ∅ that could fail to be in A.
+- `A ⊆ A` for every set A.
+- **Set equality:** `A = B` exactly when `A ⊆ B` and `B ⊆ A`. This is how you *prove* two sets are equal: show each is a subset of the other.
+
+> [!example]
+> `{1, 3} ⊆ {1, 2, 3}` and `{1, 3} ⊂ {1, 2, 3}`, but `{1, 4} ⊄ {1, 2, 3}` because 4 is missing.
+
+## Don't mix up ∈ and ⊆
+`1 ∈ {1, 2}` is true. `{1} ⊆ {1, 2}` is true. `1 ⊆ {1, 2}` doesn't make sense, because 1 isn't a set.
+
+## Check yourself
+- [ ] List every subset of `{a, b}`
+- [ ] Is `{∅} ⊆ {∅, 1}`? Is `∅ ∈ {∅, 1}`?
+- [ ] Explain why ∅ is a subset of every set
+
+Related: [[Power Sets]], [[Set Operations]], [[Set Notation]]
+#sets
+
+@@ Discrete Mathematics/Power Sets
+The **power set** of A, written `P(A)` or `℘(A)`, is the set of *all* subsets of A.
+
+> [!example]
+> `P({a, b}) = { ∅, {a}, {b}, {a, b} }`
+
+## How big is it?
+If A has n elements, `|P(A)| = 2ⁿ`.
+
+Why: building a subset means deciding, for each of the n elements, *in* or *out*. That's 2 choices made n times, so 2 × 2 × … × 2 = 2ⁿ subsets. It's the same count as the number of n-bit binary strings, where each bit says whether an element is included.
+
+## Edge cases
+- `P(∅) = {∅}`, which has 1 element (2⁰ = 1)
+- `P({∅}) = {∅, {∅}}`, which has 2 elements
+
+## Check yourself
+- [ ] Write out `P({1, 2, 3})` and check it has 8 elements
+- [ ] How many subsets of `{1, 2, 3, 4, 5}` contain the element 1?
+- [ ] Find `|P(P({x}))|`
+
+Related: [[Subsets]], [[Cardinality]]
+#sets
+
+@@ Discrete Mathematics/Set Operations
+Assume every set lives inside a **universal set** U.
+
+| Operation | Notation | Contains |
+| --- | --- | --- |
+| Union | `A ∪ B` | elements in A or B (or both) |
+| Intersection | `A ∩ B` | elements in both A and B |
+| Difference | `A \ B` or `A − B` | elements in A but not in B |
+| Complement | `A′` or `Aᶜ` | elements of U not in A |
+| Symmetric difference | `A △ B` | elements in exactly one of A, B |
+| Cartesian product | `A × B` | ordered pairs `(a, b)` with a ∈ A, b ∈ B |
+
+A and B are **disjoint** if `A ∩ B = ∅`.
+
+## De Morgan's laws
+- `(A ∪ B)′ = A′ ∩ B′`
+- `(A ∩ B)′ = A′ ∪ B′`
+
+These mirror the logic versions in [[Propositional Logic]]: "not (p or q)" is "not p and not q".
+
+> [!tip] Draw it
+> Venn diagrams are the quickest way to sanity-check an identity before you prove it properly with [[Subsets]].
+
+## Check yourself
+- [ ] With `A = {1,2,3}` and `B = {2,3,4}`, find `A ∪ B`, `A ∩ B`, `A \ B` and `A △ B`
+- [ ] Write out `{0,1} × {a,b}`
+- [ ] Prove `A \ B = A ∩ B′`
+
+Related: [[Cardinality]], [[Relations]]
+#sets
+
+@@ Discrete Mathematics/Cardinality
+The **cardinality** of a finite set A, written `|A|`, is the number of elements it has.
+
+- `|∅| = 0`
+- `|{∅}| = 1`
+- `|{a, b, a}| = 2`, because duplicates don't count
+
+## Counting rules
+- **Inclusion–exclusion:** `|A ∪ B| = |A| + |B| − |A ∩ B|`. You subtract the overlap because it was counted twice.
+- **Product:** `|A × B| = |A| · |B|`
+- **Power set:** `|P(A)| = 2^|A|` (see [[Power Sets]])
+
+## Infinite sets
+Two sets have the same cardinality when there's a bijection between them (see [[Functions (Maths)]]).
+- **Countably infinite:** same size as ℕ. ℤ and ℚ are both countable, which surprises most people.
+- **Uncountable:** ℝ is strictly bigger than ℕ. Cantor's diagonal argument proves no list can contain every real number.
+
+## Check yourself
+- [ ] 40 students take Maths, 30 take CS and 12 take both. How many take at least one?
+- [ ] What is `|{1, {1}, {1, {1}}}|`?
+- [ ] Describe a bijection between ℕ and the even natural numbers
+
+Related: [[Number Systems]], [[Set Operations]]
+#sets
+
+@@ Discrete Mathematics/Number Systems
+## The standard sets
+`ℕ ⊂ ℤ ⊂ ℚ ⊂ ℝ ⊂ ℂ`
+
+| Symbol | Name | Examples |
+| --- | --- | --- |
+| ℕ | Natural numbers | 0, 1, 2, 3, … |
+| ℤ | Integers | …, −2, −1, 0, 1, 2, … |
+| ℚ | Rationals | ½, −3/4, 5, 0.75 |
+| ℝ | Reals | π, √2, −1.5 |
+| ℂ | Complex | 3 + 2i, i |
+
+> [!warning] Is 0 a natural number?
+> Many CS courses include 0 in ℕ, and some maths texts don't. Check which convention your module uses and stick to it in exams.
+
+A real number that isn't rational is **irrational**. `√2` is the classic example, and proving it is a standard proof by contradiction.
+
+## Number bases
+Computers store numbers in base 2.
+- Decimal `13` = binary `1101₂` (8 + 4 + 0 + 1) = hex `D₁₆`
+- Each hex digit is exactly 4 binary digits, which is why hex is used to write bytes.
+
+## Check yourself
+- [ ] Which of these are in ℚ: 0.333…, √9, π, −7?
+- [ ] Convert 45 to binary and to hex
+- [ ] Write ℤ⁺ (the positive integers) in set-builder notation
+
+Related: [[Set Notation]], [[Cardinality]], [[Variables and Types]]
+#number-systems
+
+@@ Discrete Mathematics/Propositional Logic
+A **proposition** is a statement that is either true or false. "7 is prime" is a proposition; "close the door" isn't.
+
+## Connectives
+| Symbol | Name | Read as |
+| --- | --- | --- |
+| `¬p` | negation | not p |
+| `p ∧ q` | conjunction | p and q |
+| `p ∨ q` | disjunction | p or q (or both) |
+| `p → q` | implication | if p then q |
+| `p ↔ q` | biconditional | p if and only if q |
+
+## The one that trips people up
+`p → q` is only false when p is true and q is false.
+
+```
+p  q | p → q
+T  T |   T
+T  F |   F
+F  T |   T
+F  F |   T
+```
+
+## Key ideas
+- **Tautology:** always true, e.g. `p ∨ ¬p`
+- **Contradiction:** always false, e.g. `p ∧ ¬p`
+- **Contrapositive:** `p → q` is equivalent to `¬q → ¬p`
+- **De Morgan:** `¬(p ∧ q) ≡ ¬p ∨ ¬q`, matching [[Set Operations]] where ∧ is ∩ and ∨ is ∪
+
+## Check yourself
+- [ ] Build the truth table for `(p → q) ∧ (q → p)` and compare it with `p ↔ q`
+- [ ] Write the contrapositive of "if n is even, then n² is even"
+- [ ] Translate `if not (a and b)` in code into an equivalent condition without the outer not
+
+Related: [[Control Flow]], [[Relations]]
+#logic
+
+@@ Discrete Mathematics/Relations
+A **relation** R from A to B is any subset of `A × B`. We write `a R b` when `(a, b) ∈ R`. A relation *on* A is a subset of `A × A`.
+
+## Properties of a relation on A
+- **Reflexive:** `a R a` for every a
+- **Symmetric:** if `a R b` then `b R a`
+- **Antisymmetric:** if `a R b` and `b R a` then `a = b`
+- **Transitive:** if `a R b` and `b R c` then `a R c`
+
+## Two important kinds
+- **Equivalence relation:** reflexive, symmetric and transitive. It splits A into equivalence classes. Example: "same remainder mod 3" on ℤ.
+- **Partial order:** reflexive, antisymmetric and transitive. Example: `≤` on ℕ, or `⊆` on a set of sets.
+
+> [!example]
+> A directed graph *is* a relation: the edges are the pairs. See [[Graphs]].
+
+## Check yourself
+- [ ] Is "is a sibling of" reflexive? Symmetric? Transitive?
+- [ ] List the equivalence classes of "same remainder mod 3" on `{0, …, 8}`
+- [ ] Show that `⊆` is a partial order
+
+Related: [[Set Operations]], [[Functions (Maths)]]
+#relations
+
+@@ Discrete Mathematics/Functions (Maths)
+A **function** `f: A → B` is a relation that pairs every element of A with *exactly one* element of B.
+
+- **Domain:** A
+- **Codomain:** B
+- **Range (image):** the elements of B actually hit, `{ f(a) | a ∈ A }`
+
+## Types of function
+- **Injective (one-to-one):** different inputs give different outputs
+- **Surjective (onto):** every element of B is hit by some input
+- **Bijective:** both. Every element of B is hit by exactly one input.
+
+A function has an **inverse** `f⁻¹` exactly when it's bijective.
+
+## Composition
+`(g ∘ f)(x) = g(f(x))`: apply f first, then g.
+
+> [!tip] Link to code
+> A pure function in a program behaves like a maths function: same input, same output, no side effects. See [[Functions and Scope]].
+
+## Check yourself
+- [ ] Is `f(x) = x²` from ℤ to ℤ injective? Surjective?
+- [ ] Give a bijection from `{1, 2, 3}` to `{a, b, c}` and write its inverse
+- [ ] Why can't there be an injection from a 5-element set into a 4-element set?
+
+Related: [[Relations]], [[Cardinality]]
+#functions
+
+@@ Programming Fundamentals/Programming Fundamentals
+The building blocks every program is made from. Examples use Python, but the ideas carry to any language.
+
+## Suggested order
+1. [[Variables and Types]]
+2. [[Control Flow]]
+3. [[Functions and Scope]]
+4. [[Recursion]]
+
+Once these feel solid, move on to [[Data Structures]].
+
+#programming
+
+@@ Programming Fundamentals/Variables and Types
+A **variable** is a name bound to a value. A **type** says what kind of value it is and what you can do with it.
+
+```python
+age = 19          # int
+height = 1.78     # float
+name = "Ada"      # str
+enrolled = True   # bool
+```
+
+## Static vs dynamic typing
+- **Static** (Java, C): types are checked before the program runs. `int x = "hi";` won't compile.
+- **Dynamic** (Python, JavaScript): types belong to values and are checked as the program runs.
+
+> [!warning] Floats aren't exact
+> `0.1 + 0.2 == 0.3` is `False` in most languages, because floats store binary approximations. Compare with a tolerance instead.
+
+## Check yourself
+- [ ] What does `type(7 / 2)` return in Python? What about `7 // 2`?
+- [ ] Explain why integers in Python never overflow but in Java they can
+- [ ] Which values are "falsy" in Python?
+
+Related: [[Number Systems]], [[Control Flow]]
+#programming
+
+@@ Programming Fundamentals/Control Flow
+Control flow decides which lines run, and how often.
+
+## Branching
+```python
+if score >= 70:
+    grade = "First"
+elif score >= 60:
+    grade = "2:1"
+else:
+    grade = "Other"
+```
+
+## Loops
+```python
+for i in range(1, 16):
+    if i % 15 == 0:
+        print("FizzBuzz")
+    elif i % 3 == 0:
+        print("Fizz")
+    elif i % 5 == 0:
+        print("Buzz")
+    else:
+        print(i)
+```
+- `for` loops over a sequence; `while` repeats until a condition is false.
+- `break` leaves the loop; `continue` skips to the next pass.
+
+> [!tip]
+> Every condition is a proposition. Simplifying a tangled `if` is just [[Propositional Logic]].
+
+## Check yourself
+- [ ] Rewrite the FizzBuzz loop using `while`
+- [ ] When would a `while` loop never run at all?
+- [ ] Simplify `if not (x > 5 or y < 2):`
+
+Related: [[Functions and Scope]], [[Recursion]]
+#programming
+
+@@ Programming Fundamentals/Functions and Scope
+A **function** packages a piece of logic behind a name so you can reuse it.
+
+```python
+def average(values):
+    total = sum(values)        # local variable
+    return total / len(values)
+```
+
+## Scope
+- Variables made inside a function are **local**: they vanish when it returns.
+- Variables at the top level of a file are **global**. Reading them inside a function works; reassigning them needs `global`, and is usually a bad sign.
+
+## Pure functions
+A function is **pure** if its output depends only on its inputs and it changes nothing outside itself. Pure functions are easier to test, and they line up with [[Functions (Maths)]].
+
+## Check yourself
+- [ ] What does a Python function return if it has no `return` statement?
+- [ ] Write a pure function that returns the largest of three numbers
+- [ ] Explain what happens to `total` after `average` returns
+
+Related: [[Recursion]], [[Stacks and Queues]]
+#programming
+
+@@ Programming Fundamentals/Recursion
+A **recursive** function solves a problem by calling itself on a smaller version of the same problem.
+
+Every recursive function needs:
+1. a **base case** that stops the recursion, and
+2. a **recursive case** that moves towards the base case.
+
+```python
+def factorial(n):
+    if n == 0:              # base case
+        return 1
+    return n * factorial(n - 1)   # recursive case
+```
+
+## What's happening underneath
+Each call is pushed onto the **call stack** ([[Stacks and Queues]]) and popped when it returns. Forget the base case and the stack overflows.
+
+> [!warning] Naive recursion can be slow
+> `fib(n) = fib(n-1) + fib(n-2)` recomputes the same values again and again, giving exponential time. Storing results (memoisation) brings it down to linear. See [[Big-O Notation]].
+
+## Check yourself
+- [ ] Trace `factorial(4)` call by call
+- [ ] Write a recursive function that sums a list
+- [ ] Rewrite `factorial` with a loop. Which is easier to read?
+
+Related: [[Trees]], [[Graph Traversal]]
+#programming #recursion
+
+@@ Data Structures/Data Structures
+Ways of organising data so the operations you need are fast. Choosing well is often the difference between a program that finishes and one that doesn't.
+
+## Suggested order
+1. [[Arrays]]
+2. [[Linked Lists]]
+3. [[Stacks and Queues]]
+4. [[Hash Tables]]
+5. [[Trees]]
+6. [[Graphs]]
+
+> [!tip]
+> For each structure, learn the cost of *access*, *search*, *insert* and *delete* using [[Big-O Notation]].
+
+#data-structures
+
+@@ Data Structures/Arrays
+An **array** stores elements in one contiguous block of memory, so element `i` sits at a fixed offset from the start.
+
+| Operation | Cost |
+| --- | --- |
+| Access by index | O(1) |
+| Search (unsorted) | O(n) |
+| Insert / delete at end | O(1) amortised |
+| Insert / delete in the middle | O(n) |
+
+## Dynamic arrays
+Python lists and Java `ArrayList` grow by allocating a bigger block (often about double) and copying. Copying is O(n), but it happens so rarely that appending is O(1) *on average*: that's what "amortised" means.
+
+## Check yourself
+- [ ] Why is inserting at index 0 slow?
+- [ ] If an array starts at address 1000 and each element is 4 bytes, where is element 7?
+- [ ] When would you choose a [[Linked Lists|linked list]] instead?
+
+Related: [[Binary Search]], [[Sorting Algorithms]]
+#data-structures
+
+@@ Data Structures/Linked Lists
+A **linked list** is a chain of nodes. Each node holds a value and a pointer to the next node.
+
+```python
+class Node:
+    def __init__(self, value, next=None):
+        self.value = value
+        self.next = next
+```
+
+| Operation | Cost |
+| --- | --- |
+| Access by index | O(n) |
+| Insert / delete at head | O(1) |
+| Insert after a known node | O(1) |
+| Search | O(n) |
+
+- **Singly linked:** each node points forward only.
+- **Doubly linked:** nodes point both ways, so you can delete a node in O(1) when you hold a reference to it.
+
+## Check yourself
+- [ ] Write a function that reverses a singly linked list
+- [ ] Why can't you binary-search a linked list efficiently?
+- [ ] Implement a stack using a linked list
+
+Related: [[Arrays]], [[Stacks and Queues]]
+#data-structures
+
+@@ Data Structures/Stacks and Queues
+## Stack: last in, first out (LIFO)
+- `push` adds to the top, `pop` removes from the top. Both O(1).
+- Used for: the function **call stack** ([[Recursion]]), undo history, matching brackets, depth-first search.
+
+## Queue: first in, first out (FIFO)
+- `enqueue` adds to the back, `dequeue` removes from the front. Both O(1) with the right implementation.
+- Used for: print jobs, task scheduling, breadth-first search ([[Graph Traversal]]).
+
+```python
+from collections import deque
+q = deque()
+q.append("a")      # enqueue
+q.popleft()        # dequeue -> "a"
+```
+
+> [!warning]
+> `list.pop(0)` in Python is O(n) because every other element shifts. Use `deque` for queues.
+
+## Check yourself
+- [ ] Use a stack to check whether `"([]{})"` is balanced
+- [ ] Build a queue from two stacks
+- [ ] What order does a stack return `push(1), push(2), push(3)` in?
+
+Related: [[Linked Lists]], [[Arrays]]
+#data-structures
+
+@@ Data Structures/Hash Tables
+A **hash table** maps keys to values. A **hash function** turns each key into an index in an underlying array.
+
+| Operation | Average | Worst |
+| --- | --- | --- |
+| Lookup | O(1) | O(n) |
+| Insert | O(1) | O(n) |
+| Delete | O(1) | O(n) |
+
+## Collisions
+Two keys can hash to the same index. Two common fixes:
+- **Chaining:** each slot holds a small list of entries.
+- **Open addressing:** on a collision, probe for the next free slot.
+
+The **load factor** (entries ÷ slots) is kept low by resizing, which keeps operations close to O(1).
+
+> [!example] You use these all the time
+> Python's `dict` is a hash table, and `set` is a hash set, which is why `x in my_set` is fast. A Python set behaves like a maths set from [[Set Notation]]: no order, no duplicates.
+
+## Check yourself
+- [ ] Why must dictionary keys be immutable in Python?
+- [ ] What happens to performance if every key hashes to the same slot?
+- [ ] Count word frequencies in a sentence using a `dict`
+
+Related: [[Arrays]], [[Big-O Notation]]
+#data-structures
+
+@@ Data Structures/Trees
+A **tree** is a hierarchy of nodes: one **root**, and every other node has exactly one **parent**. Nodes with no children are **leaves**. The **height** is the longest path from root to a leaf.
+
+## Binary search trees
+Each node has at most two children, and for every node:
+- everything in the left subtree is smaller
+- everything in the right subtree is larger
+
+| Operation | Balanced | Worst (a "stick") |
+| --- | --- | --- |
+| Search | O(log n) | O(n) |
+| Insert | O(log n) | O(n) |
+
+Self-balancing trees (AVL, red–black) keep the height near log₂ n.
+
+## Traversals
+- **In-order** (left, node, right) visits a BST's values in sorted order.
+- **Pre-order** and **post-order** are natural fits for [[Recursion]].
+
+## Check yourself
+- [ ] Insert 5, 3, 8, 1, 4 into an empty BST and draw it
+- [ ] Insert 1, 2, 3, 4, 5 instead. Why is the result bad?
+- [ ] Write a recursive function for a tree's height
+
+Related: [[Graphs]], [[Binary Search]]
+#data-structures
+
+@@ Data Structures/Graphs
+A **graph** `G = (V, E)` is a set of vertices V and a set of edges E. In a directed graph, `E ⊆ V × V`, which makes E a relation on V ([[Relations]]).
+
+- **Undirected:** edges go both ways (friendships)
+- **Directed:** edges have a direction (follows, links between web pages)
+- **Weighted:** edges carry a cost (road distances)
+
+## Storing a graph
+| | Adjacency list | Adjacency matrix |
+| --- | --- | --- |
+| Space | O(V + E) | O(V²) |
+| Is there an edge u→v? | O(degree of u) | O(1) |
+| Best for | sparse graphs | dense graphs |
+
+> [!tip]
+> The graph view in this vault is a graph: notes are vertices and links are edges.
+
+## Check yourself
+- [ ] Draw the adjacency list for a triangle with vertices a, b, c
+- [ ] Is a tree a graph? What extra property does it have?
+- [ ] What is the maximum number of edges in an undirected graph with n vertices?
+
+Related: [[Graph Traversal]], [[Trees]]
+#data-structures #graphs
+
+@@ Algorithms/Algorithms
+Step-by-step procedures for solving problems, and how to measure their cost.
+
+## Suggested order
+1. [[Big-O Notation]]
+2. [[Binary Search]]
+3. [[Sorting Algorithms]]
+4. [[Graph Traversal]]
+
+You'll get more from this module after [[Programming Fundamentals]] and the first half of [[Data Structures]].
+
+#algorithms
+
+@@ Algorithms/Big-O Notation
+**Big-O** describes how an algorithm's running time (or memory) grows as the input size n grows.
+
+> [!note] Definition
+> `f(n) = O(g(n))` if there are constants `c > 0` and `n₀` such that `f(n) ≤ c · g(n)` for every `n ≥ n₀`.
+
+## Common classes, fastest first
+| Class | Name | Example |
+| --- | --- | --- |
+| O(1) | constant | array index |
+| O(log n) | logarithmic | [[Binary Search]] |
+| O(n) | linear | scanning a list |
+| O(n log n) | linearithmic | merge sort |
+| O(n²) | quadratic | bubble sort |
+| O(2ⁿ) | exponential | naive Fibonacci |
+
+## Simplifying
+- Drop constant factors: `3n + 10` is `O(n)`.
+- Keep the dominant term: `n² + 500n` is `O(n²)`.
+- Nested loops over the same input usually multiply: two levels give `O(n²)`.
+
+## Check yourself
+- [ ] What is the Big-O of `n³ + 2ⁿ`?
+- [ ] A loop halves n each pass until it reaches 1. How many passes?
+- [ ] Is `5n` in `O(n²)`? Is `n²` in `O(5n)`?
+
+Related: [[Sorting Algorithms]], [[Recursion]]
+#algorithms
+
+@@ Algorithms/Binary Search
+Find a value in a **sorted** array by repeatedly halving the search range.
+
+```python
+def binary_search(xs, target):
+    lo, hi = 0, len(xs) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if xs[mid] == target:
+            return mid
+        if xs[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+```
+
+Each step throws away half the remaining elements, so it takes at most about log₂ n steps: **O(log n)**. For a million elements, that's around 20 comparisons.
+
+> [!warning]
+> It only works on sorted data. Sorting first costs O(n log n), so it pays off when you search many times.
+
+## Check yourself
+- [ ] Trace a search for 7 in `[1, 3, 5, 7, 9, 11]`
+- [ ] Why `lo <= hi` and not `lo < hi`?
+- [ ] Write the recursive version
+
+Related: [[Arrays]], [[Trees]], [[Big-O Notation]]
+#algorithms
+
+@@ Algorithms/Sorting Algorithms
+| Algorithm | Best | Average | Worst | Stable? |
+| --- | --- | --- | --- | --- |
+| Bubble sort | O(n) | O(n²) | O(n²) | yes |
+| Insertion sort | O(n) | O(n²) | O(n²) | yes |
+| Merge sort | O(n log n) | O(n log n) | O(n log n) | yes |
+| Quicksort | O(n log n) | O(n log n) | O(n²) | no |
+
+- **Stable** means equal elements keep their original order.
+- **Insertion sort** is fast on small or nearly sorted lists.
+- **Merge sort** splits, sorts each half recursively, then merges: a classic use of [[Recursion]].
+- **Quicksort** picks a pivot and partitions. A bad pivot on already-sorted data gives the O(n²) worst case.
+
+> [!note] A hard limit
+> Any sort that only compares elements needs Ω(n log n) comparisons in the worst case.
+
+## Check yourself
+- [ ] Sort `[5, 2, 4, 1, 3]` by hand with insertion sort
+- [ ] Why does merge sort need extra memory?
+- [ ] Which algorithm would you pick for a list that's already nearly sorted?
+
+Related: [[Big-O Notation]], [[Binary Search]]
+#algorithms
+
+@@ Algorithms/Graph Traversal
+Two ways to visit every reachable vertex in a [[Graphs|graph]].
+
+## Breadth-first search (BFS)
+Explores level by level using a **queue**. In an unweighted graph it finds the shortest path from the start.
+
+```python
+from collections import deque
+def bfs(graph, start):
+    seen, q = {start}, deque([start])
+    while q:
+        v = q.popleft()
+        for w in graph[v]:
+            if w not in seen:
+                seen.add(w)
+                q.append(w)
+    return seen
+```
+
+## Depth-first search (DFS)
+Goes as deep as possible before backtracking, using a **stack** or [[Recursion]]. Good for cycle detection and topological sorting.
+
+Both take **O(V + E)** with an adjacency list.
+
+## Check yourself
+- [ ] Run BFS by hand on a small graph and record the visit order
+- [ ] Change `bfs` into DFS by swapping one data structure
+- [ ] Why does `seen` need to be a set rather than a list? (see [[Hash Tables]])
+
+Related: [[Stacks and Queues]], [[Graphs]]
+#algorithms #graphs
+
+@@ My Notes/Scratchpad
+This folder is yours. Write here, or drag your own lecture notes, slides and screenshots in from your computer.
+
+- [ ] Drop a `.md` or `.txt` file onto the **My Notes** folder in the tree
+- [ ] Drop a PDF of lecture slides and open it from the tree
+- [ ] Make a new note and link it to a concept, like [[Power Sets]]
+</script>
+
+<script>
+(() => {
+"use strict";
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const unesc = s => { const t = document.createElement("textarea"); t.innerHTML = s; return t.value; };
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const newId = () => "n-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const fmtSize = b => b < 1024 ? b + " B" : b < 1048576 ? (b / 1024).toFixed(1) + " KB" : (b / 1048576).toFixed(1) + " MB";
+
+const ICONS = {
+  folder:'<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>',
+  folderPlus:'<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/>',
+  filePlus:'<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>',
+  file:'<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+  clip:'<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+  search:'<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  graph:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  book:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  pencil:'<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  x:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  chev:'<polyline points="9 18 15 12 9 6"/>',
+  panelL:'<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>',
+  panelR:'<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/>',
+  switcher:'<path d="m21 21-4.3-4.3"/><circle cx="11" cy="11" r="7"/><path d="M8 11h6"/><path d="M11 8v6"/>',
+  home:'<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+  trash:'<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  info:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+  bulb:'<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>',
+  alert:'<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  list:'<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  help:'<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  check:'<polyline points="20 6 9 17 4 12"/>'
+};
+const ico = (n, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
+
+/* ---------- state ---------- */
+const builtins = new Map();
+const folderOrder = new Map();
+const state = {
+  notes: new Map(), userFolders: new Set(), deleted: new Set(),
+  tabs: [], active: null, modes: {},
+  collapsed: new Set(), left: "files", query: "",
+};
+try { JSON.parse(lsGet("lv-collapsed") || "[]").forEach(f => state.collapsed.add(f)); } catch (e) {}
+const STATUS = { new: "Not started", learning: "Learning", mastered: "Mastered" };
+const STATUS_NEXT = { new: "learning", learning: "mastered", mastered: "new" };
+
+function parseSeed() {
+  const txt = $("#seed").textContent;
+  const parts = txt.split(/^@@ /m).slice(1);
+  parts.forEach((p, idx) => {
+    const nl = p.indexOf("\n");
+    const head = p.slice(0, nl).trim();
+    const body = p.slice(nl + 1).replace(/\s+$/, "") + "\n";
+    const cut = head.lastIndexOf("/");
+    const folder = cut < 0 ? "" : head.slice(0, cut);
+    const title = head.slice(cut + 1);
+    const isHub = folder && title === folder.split("/").pop();
+    const status = (!folder || isHub || folder === "My Notes") ? null : "new";
+    if (folder && !folderOrder.has(folder)) folderOrder.set(folder, idx);
+    const n = { id: "b-" + slug(head), title, folder, body, kind: "note", status, order: idx, updated: 0 };
+    builtins.set(n.id, n);
+    state.notes.set(n.id, { ...n });
+  });
+}
+
+const isBuiltin = id => builtins.has(id);
+const allNotes = () => [...state.notes.values()];
+function findByTitle(t) {
+  if (!t) return null;
+  const q = t.trim().toLowerCase();
+  let hit = null;
+  for (const n of state.notes.values()) {
+    const tl = n.title.toLowerCase();
+    if (tl === q || (n.kind === "note" && tl + ".md" === q)) { hit = n; break; }
+  }
+  return hit;
+}
+function linksOf(n) {
+  if (n.kind !== "note") return [];
+  const out = new Set();
+  const src = n.body.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]*`/g, "");
+  for (const m of src.matchAll(/!?\[\[([^\]|#\n]+)/g)) out.add(m[1].trim());
+  return [...out];
+}
+function backlinksOf(n) {
+  const t = n.title.toLowerCase();
+  return allNotes().filter(o => o.id !== n.id && linksOf(o).some(l => l.toLowerCase() === t || l.toLowerCase() === t + ".md"));
+}
+
+/* ---------- storage ---------- */
+const Store = {
+  mode: "pending", db: null, uid: null, assets: null,
+  dirty: new Map(), timers: new Map(), chains: new Map(), slow: false,
+  coll() { return this.db.collection("data/users/" + this.uid); },
+  async init() {
+    let db = null, user = null, assets = null;
+    if (window.claude && typeof window.claude.use === "function") {
+      try {
+        [db, user, assets] = await Promise.all([
+          claude.use("db").catch(() => null), claude.use("user").catch(() => null), claude.use("assets").catch(() => null)
+        ]);
+      } catch (e) {}
+    }
+    this.assets = assets;
+    let uid = null;
+    if (db && user) { try { uid = await user.id(); } catch (e) {} }
+    if (db && uid) {
+      this.db = db; this.uid = uid; this.mode = "cloud";
+      this.subscribe();
+    } else {
+      this.mode = lsSet("lv-probe", "1") ? "local" : "memory";
+      loadLocal();
+      renderAll();
+    }
+    for (const id of [...this.dirty.keys()]) this.flush(id);
+    renderStatus();
+  },
+  subscribe() {
+    let confirmed = false;
+    const timer = setTimeout(() => { if (!confirmed) { this.slow = true; renderStatus(); } }, 10000);
+    this.coll().onSnapshot(snap => {
+      if (!snap.metadata.fromCache && !confirmed) { confirmed = true; clearTimeout(timer); this.slow = false; }
+      let changed = false;
+      for (const ch of snap.docChanges()) {
+        const id = ch.doc.id;
+        if (this.dirty.has(id)) continue;
+        if (ch.type === "removed") {
+          if (isBuiltin(id)) { state.deleted.delete(id); state.notes.set(id, { ...builtins.get(id) }); }
+          else state.notes.delete(id);
+          changed = true; continue;
+        }
+        const d = ch.doc.data() || {};
+        if (id === "_meta") { state.userFolders = new Set(Array.isArray(d.folders) ? d.folders : []); changed = true; continue; }
+        if (d.deleted) { state.notes.delete(id); state.deleted.add(id); changed = true; continue; }
+        if (typeof d.title !== "string") continue;
+        const n = {
+          id, title: d.title, folder: d.folder || "", body: d.body || "", kind: d.kind === "file" ? "file" : "note",
+          status: d.status || null, mime: d.mime || "", assetId: d.assetId || "", size: d.size || 0,
+          updated: d.updated || 0, order: typeof d.order === "number" ? d.order : 9999, touched: true
+        };
+        if (n.assetId) n.url = "/_blob/" + n.assetId;
+        const cur = state.notes.get(id);
+        if (cur) { delete cur.ephemeral; Object.assign(cur, n); } else state.notes.set(id, n);
+        changed = true;
+      }
+      if (changed) renderAll(true);
+      renderStatus();
+    }, err => {
+      clearTimeout(timer);
+      this.mode = "error"; renderStatus();
+      toast("Couldn't load your saved notes. Changes will only last for this visit.");
+    });
+  },
+  queue(id) {
+    this.dirty.set(id, (this.dirty.get(id) || 0) + 1);
+    clearTimeout(this.timers.get(id));
+    this.timers.set(id, setTimeout(() => this.flush(id), 700));
+    renderStatus();
+  },
+  flush(id) {
+    if (this.mode === "pending") return;
+    const prev = this.chains.get(id) || Promise.resolve();
+    const p = prev.then(() => this.write(id));
+    this.chains.set(id, p.catch(() => {}));
+    return p;
+  },
+  async write(id) {
+    const ver = this.dirty.get(id);
+    if (ver === undefined) return;
+    const n = id === "_meta" ? null : state.notes.get(id);
+    if (n && n.ephemeral) { this.done(id, ver); return; }
+    if (this.mode === "cloud") {
+      const ref = this.coll().doc(id);
+      const run = () => {
+        if (id === "_meta") return ref.set({ folders: [...state.userFolders] });
+        if (!n) return isBuiltin(id) ? ref.set({ deleted: true }) : ref.delete();
+        return ref.set(serialize(n));
+      };
+      try { await run(); }
+      catch (e) {
+        if (e && e.code === "unavailable") {
+          await sleep(600 + Math.random() * 900);
+          try { await run(); } catch (e2) { toast("Couldn't save right now. Your change is kept on this page; it will retry on your next edit."); renderStatus(); return; }
+        } else if (e && e.code === "quota_exceeded") {
+          toast("Your vault storage is full. Delete some notes or files to keep saving."); this.done(id, ver); return;
+        } else if (e && e.code === "invalid_argument") {
+          toast("That note is too large to save. Try splitting it into smaller notes."); this.done(id, ver); return;
+        } else { toast("Couldn't save that change."); this.done(id, ver); return; }
+      }
+    } else if (this.mode === "local") {
+      saveLocal();
+    }
+    this.done(id, ver);
+  },
+  done(id, ver) { if (this.dirty.get(id) === ver) this.dirty.delete(id); renderStatus(); }
+};
+function serialize(n) {
+  const o = { title: n.title, folder: n.folder || "", body: n.body || "", kind: n.kind, status: n.status || null, updated: n.updated || Date.now(), order: typeof n.order === "number" ? n.order : 9999 };
+  if (n.kind === "file") { o.mime = n.mime || ""; o.assetId = n.assetId || ""; o.size = n.size || 0; }
+  return o;
+}
+function loadLocal() {
+  const raw = lsGet("learning-vault-v1");
+  if (!raw) return;
+  try {
+    const d = JSON.parse(raw);
+    (d.notes || []).forEach(n => { if (n && n.id && typeof n.title === "string") state.notes.set(n.id, { ...n, touched: true }); });
+    (d.deleted || []).forEach(id => { state.notes.delete(id); state.deleted.add(id); });
+    (d.folders || []).forEach(f => state.userFolders.add(f));
+  } catch (e) {}
+}
+function saveLocal() {
+  const notes = allNotes().filter(n => n.touched && !n.ephemeral && !(n.kind === "file" && !n.assetId)).map(n => ({ id: n.id, ...serialize(n), url: n.assetId ? "/_blob/" + n.assetId : undefined }));
+  const ok = lsSet("learning-vault-v1", JSON.stringify({ notes, deleted: [...state.deleted], folders: [...state.userFolders] }));
+  if (!ok) { Store.mode = "memory"; toast("This browser won't let the page save. Changes last for this visit only."); }
+}
+function touch(n, { render = true } = {}) {
+  n.updated = Date.now(); n.touched = true;
+  Store.queue(n.id);
+  if (render) renderAll();
+}
+
+/* ---------- markdown ---------- */
+function inline(s) {
+  const codes = [];
+  s = s.replace(/`([^`]+)`/g, (m, c) => { codes.push(c); return "\u0000" + (codes.length - 1) + "\u0000"; });
+  s = esc(s);
+  s = s.replace(/!\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m, t, a) => embedHtml(unesc(t.trim()), a));
+  s = s.replace(/\[\[([^\]|#]+)(#[^\]|]*)?(?:\|([^\]]+))?\]\]/g, (m, t, h, a) => {
+    const raw = unesc(t.trim()); const n = findByTitle(raw);
+    return `<a class="internal-link${n ? "" : " unresolved"}" href="#" data-target="${esc(raw)}">${a || t.trim()}</a>`;
+  });
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a class="external-link" href="$2" target="_blank" rel="noopener">$1</a>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\w)/g, "$1<em>$2</em>");
+  s = s.replace(/==([^=]+)==/g, "<mark>$1</mark>");
+  s = s.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+  s = s.replace(/(^|\s)#([A-Za-z][\w/-]*)/g, '$1<a class="tag" href="#" data-tag="$2">#$2</a>');
+  s = s.replace(/\u0000(\d+)\u0000/g, (m, i) => "<code>" + esc(codes[+i]) + "</code>");
+  return s;
+}
+function embedHtml(title, alias) {
+  const n = findByTitle(title);
+  if (n && n.kind === "file" && n.url && /^image\//.test(n.mime)) return `<img src="${esc(n.url)}" alt="${esc(alias || n.title)}">`;
+  return `<a class="internal-link embed-chip${n ? "" : " unresolved"}" href="#" data-target="${esc(title)}">${ico(n && n.kind === "file" ? "clip" : "file", "sm")}${esc(alias || title)}</a>`;
+}
+const CALLOUT_ICON = { tip: "bulb", success: "check", warning: "alert", caution: "alert", example: "list", question: "help" };
+function renderMd(src, base = 0) {
+  const lines = src.replace(/\r/g, "").split("\n");
+  let html = "", i = 0;
+  const isStart = l => /^(#{1,6}\s|```|>|\s*([-*+]|\d+\.)\s|\|)/.test(l) || /^(-{3,}|\*{3,})\s*$/.test(l);
+  if (base === 0 && lines[0] === "---") {
+    const end = lines.indexOf("---", 1);
+    if (end > 0) {
+      const rows = lines.slice(1, end).map(l => { const k = l.indexOf(":"); return k > 0 ? `<dt>${esc(l.slice(0, k).trim())}</dt><dd>${esc(l.slice(k + 1).trim())}</dd>` : ""; }).join("");
+      if (rows) html += `<dl class="props">${rows}</dl>`;
+      i = end + 1;
+    }
+  }
+  let h = 0;
+  while (i < lines.length) {
+    const l = lines[i]; let m;
+    if (/^```/.test(l)) {
+      const buf = []; i++;
+      while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
+      i++; html += `<pre><code>${esc(buf.join("\n"))}</code></pre>`; continue;
+    }
+    if ((m = l.match(/^(#{1,6})\s+(.*)$/))) { const lv = m[1].length; html += `<h${lv} data-h="${h++}">${inline(m[2])}</h${lv}>`; i++; continue; }
+    if (/^(-{3,}|\*{3,})\s*$/.test(l)) { html += "<hr>"; i++; continue; }
+    if (/^>/.test(l)) {
+      const buf = [];
+      while (i < lines.length && /^>/.test(lines[i])) buf.push(lines[i++].replace(/^>\s?/, ""));
+      const cm = buf[0].match(/^\[!(\w+)\][-+]?\s*(.*)$/);
+      if (cm) {
+        const type = cm[1].toLowerCase();
+        const title = cm[2] || type.charAt(0).toUpperCase() + type.slice(1);
+        html += `<div class="callout" data-callout="${esc(type)}"><div class="callout-title">${ico(CALLOUT_ICON[type] || "info", "sm")}${inline(title)}</div><div class="callout-content">${renderMd(buf.slice(1).join("\n"), -1)}</div></div>`;
+      } else html += `<blockquote>${renderMd(buf.join("\n"), -1)}</blockquote>`;
+      continue;
+    }
+    if (/^\|.*\|\s*$/.test(l) && i + 1 < lines.length && /^\|?\s*:?-{2,}/.test(lines[i + 1])) {
+      const rows = [];
+      while (i < lines.length && /^\|.*\|\s*$/.test(lines[i])) rows.push(lines[i++]);
+      const cells = r => r.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+      html += `<div class="table-wrap"><table><thead><tr>${cells(rows[0]).map(c => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${rows.slice(2).map(r => `<tr>${cells(r).map(c => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+      continue;
+    }
+    if (/^\s*([-*+]|\d+\.)\s+/.test(l)) {
+      const stack = [];
+      while (i < lines.length) {
+        const lm = lines[i].match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
+        if (!lm) break;
+        const ind = lm[1].replace(/\t/g, "    ").length;
+        const type = /\d/.test(lm[2]) ? "ol" : "ul";
+        while (stack.length && ind < stack[stack.length - 1].ind) html += `</li></${stack.pop().type}>`;
+        if (!stack.length || ind > stack[stack.length - 1].ind) { html += `<${type}>`; stack.push({ type, ind }); }
+        else html += "</li>";
+        const t = lm[3].match(/^\[( |x|X)\]\s+(.*)$/);
+        if (t) {
+          const done = t[1] !== " ";
+          html += `<li class="task${done ? " done" : ""}"><input type="checkbox" aria-label="Done"${done ? " checked" : ""}${base >= 0 ? ` data-line="${i + base}"` : " disabled"}>${inline(t[2])}`;
+        } else html += `<li>${inline(lm[3])}`;
+        i++;
+      }
+      while (stack.length) html += `</li></${stack.pop().type}>`;
+      continue;
+    }
+    if (!l.trim()) { i++; continue; }
+    const buf = [];
+    while (i < lines.length && lines[i].trim() && !(buf.length && isStart(lines[i]))) buf.push(lines[i++]);
+    html += `<p>${buf.map(inline).join("<br>")}</p>`;
+  }
+  return html;
+}
+function headingsOf(body) {
+  const out = []; let inCode = false;
+  for (const l of body.split("\n")) {
+    if (/^```/.test(l)) { inCode = !inCode; continue; }
+    if (inCode) continue;
+    const m = l.match(/^(#{1,6})\s+(.*)$/);
+    if (m) out.push({ lv: m[1].length, text: m[2].replace(/[*_`=\[\]]/g, "") });
+  }
+  return out;
+}
+
+/* ---------- folders & tree ---------- */
+function allFolders() {
+  const set = new Set();
+  const add = f => { if (!f) return; const parts = f.split("/"); for (let k = 1; k <= parts.length; k++) set.add(parts.slice(0, k).join("/")); };
+  allNotes().forEach(n => add(n.folder));
+  state.userFolders.forEach(add);
+  return set;
+}
+function folderSortKey(path) {
+  if (folderOrder.has(path)) return folderOrder.get(path);
+  let min = Infinity;
+  allNotes().forEach(n => { if ((n.folder === path || n.folder.startsWith(path + "/")) && typeof n.order === "number") min = Math.min(min, n.order); });
+  return min === Infinity ? 100000 : min;
+}
+function progressOf(path) {
+  const ns = allNotes().filter(n => n.status && (n.folder === path || n.folder.startsWith(path + "/") || path === null));
+  const c = { total: ns.length, mastered: 0, learning: 0 };
+  ns.forEach(n => { if (n.status === "mastered") c.mastered++; else if (n.status === "learning") c.learning++; });
+  return c;
+}
+function sortNotes(list, folder) {
+  const hub = folder ? folder.split("/").pop() : null;
+  return list.sort((a, b) => {
+    if (hub) { if (a.title === hub) return -1; if (b.title === hub) return 1; }
+    if (a.kind !== b.kind) return a.kind === "note" ? -1 : 1;
+    const oa = typeof a.order === "number" ? a.order : 9999, ob = typeof b.order === "number" ? b.order : 9999;
+    return oa - ob || a.title.localeCompare(b.title);
+  });
+}
+function treeHtml(path, depth) {
+  const folders = [...allFolders()].filter(f => (path ? f.startsWith(path + "/") && f.split("/").length === path.split("/").length + 1 : !f.includes("/")));
+  folders.sort((a, b) => folderSortKey(a) - folderSortKey(b) || a.localeCompare(b));
+  let html = "";
+  for (const f of folders) {
+    const open = !state.collapsed.has(f);
+    const p = progressOf(f);
+    html += `<div class="tree-folder${open ? " open" : ""}" data-folder="${esc(f)}">
+      <div class="row" data-folder-row="${esc(f)}" tabindex="0" role="treeitem" aria-expanded="${open}">${ico("chev", "sm chev")}<span class="name">${esc(f.split("/").pop())}</span>${p.total ? `<span class="prog" title="${p.mastered} of ${p.total} concepts mastered">${p.mastered}/${p.total}</span>` : ""}</div>
+      <div class="tree-children">${treeHtml(f, depth + 1)}</div></div>`;
+  }
+  const notes = sortNotes(allNotes().filter(n => (n.folder || "") === (path || "")), path);
+  for (const n of notes) {
+    const ext = n.kind === "file" ? (n.title.match(/\.([a-z0-9]+)$/i) || [, "file"])[1] : "";
+    html += `<div class="tree-note${state.active === n.id ? " active" : ""}" data-id="${esc(n.id)}" draggable="true" tabindex="0" role="treeitem"><span class="name">${esc(n.kind === "file" ? n.title.replace(/\.[^.]+$/, "") : n.title)}</span>${n.kind === "file" ? `<span class="ext">${esc(ext)}</span>` : ""}${n.status ? `<span class="dot ${n.status}" title="${STATUS[n.status]}"></span>` : ""}</div>`;
+  }
+  return html;
+}
+
+/* ---------- rendering ---------- */
+const view = { key: null };
+const SPECIAL = new Set(["graph", "home"]);
+function activeNote() { return state.active && !SPECIAL.has(state.active) ? state.notes.get(state.active) : null; }
+
+function renderLeft() {
+  const body = $("#left-body");
+  $("#lt-files").classList.toggle("on", state.left === "files");
+  $("#lt-search").classList.toggle("on", state.left === "search");
+  $("#left-title").textContent = state.left === "files" ? "Modules" : "Search";
+  if (state.left === "files") {
+    body.innerHTML = `<div role="tree" aria-label="Vault files">${treeHtml("", 0)}</div>`;
+  } else {
+    let box = $("#search-in", body);
+    if (!box) {
+      body.innerHTML = `<label class="search-box">${ico("search", "sm")}<input id="search-in" placeholder="Search notes" autocomplete="off"></label><div id="search-res"></div>`;
+      box = $("#search-in", body);
+      box.value = state.query;
+      box.addEventListener("input", () => { state.query = box.value; renderSearch(); });
+    }
+    renderSearch();
+  }
+  const p = progressOf(null);
+  const pct = x => p.total ? (x / p.total * 100) : 0;
+  $("#vault-foot").innerHTML = `<div class="vn">Learning Vault<span>${p.mastered} of ${p.total} mastered</span></div>
+    <div class="bar" role="img" aria-label="${p.mastered} mastered, ${p.learning} in progress, out of ${p.total}"><i class="b-done" style="width:${pct(p.mastered)}%"></i><i class="b-learn" style="width:${pct(p.learning)}%"></i></div>`;
+}
+function renderSearch() {
+  const out = $("#search-res"); if (!out) return;
+  const q = state.query.trim().toLowerCase();
+  if (!q) { out.innerHTML = `<div class="empty-note">Type to search titles and note text. Try <b>#sets</b> or <b>bijection</b>.</div>`; return; }
+  const res = [];
+  for (const n of allNotes()) {
+    const inTitle = n.title.toLowerCase().includes(q);
+    const idx = n.body.toLowerCase().indexOf(q);
+    if (!inTitle && idx < 0) continue;
+    let snip = "";
+    if (idx >= 0) {
+      const s = Math.max(0, idx - 40), raw = n.body.slice(s, idx + q.length + 60).replace(/\n/g, " ");
+      const k = idx - s;
+      snip = (s ? "…" : "") + esc(raw.slice(0, k)) + "<mark>" + esc(raw.slice(k, k + q.length)) + "</mark>" + esc(raw.slice(k + q.length));
+    }
+    res.push({ n, score: inTitle ? 0 : 1, snip });
+  }
+  res.sort((a, b) => a.score - b.score || a.n.title.localeCompare(b.n.title));
+  out.innerHTML = res.length ? `<div class="empty-note" style="padding:0 8px 6px">${res.length} result${res.length > 1 ? "s" : ""}</div>` + res.slice(0, 80).map(r => `<div class="result" data-id="${esc(r.n.id)}" tabindex="0"><div class="rt">${esc(r.n.title)}</div>${r.snip ? `<div class="rs">${r.snip}</div>` : ""}</div>`).join("") : `<div class="empty-note">No notes match “${esc(state.query)}”.</div>`;
+}
+function renderTabs() {
+  const bar = $("#tabbar");
+  bar.innerHTML = state.tabs.map(t => {
+    const n = SPECIAL.has(t) ? null : state.notes.get(t);
+    const title = t === "graph" ? "Graph view" : t === "home" ? "Home" : n ? n.title : "Missing";
+    return `<div class="tab${t === state.active ? " active" : ""}" role="tab" aria-selected="${t === state.active}" data-tab="${esc(t)}" title="${esc(title)}">${t === "graph" ? ico("graph", "sm") : t === "home" ? ico("home", "sm") : ""}<span class="tt">${esc(title)}</span><button class="x" data-close="${esc(t)}" aria-label="Close ${esc(title)}">${ico("x", "sm")}</button></div>`;
+  }).join("") + `<button class="tab-add" id="tab-add" title="New note" aria-label="New note">${ico("plus", "sm")}</button>`;
+  const act = bar.querySelector(".tab.active"); if (act) act.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+function renderHeader() {
+  const hd = $("#view-header"); const n = activeNote();
+  if (!n) { hd.innerHTML = state.active === "graph" ? `<div class="crumbs"><b>Graph view</b> · ${allNotes().filter(x => x.kind === "note").length} notes</div>` : state.active === "home" ? `<div class="crumbs"><b>Home</b></div>` : ""; return; }
+  const crumbs = (n.folder ? n.folder.split("/").map(esc).join(" / ") + " / " : "") + `<b>${esc(n.title)}</b>`;
+  const mode = state.modes[n.id] || "read";
+  hd.innerHTML = `<div class="crumbs">${crumbs}</div>
+    ${n.kind === "note" ? (n.status ? `<button class="pill ${n.status}" id="status-pill" title="Click to change status"><span class="dot ${n.status}"></span>${STATUS[n.status]}</button>` : "") : ""}
+    ${n.kind === "note" ? `<button class="icon-btn" id="mode-btn" title="${mode === "read" ? "Edit (Ctrl/Cmd+E)" : "Read (Ctrl/Cmd+E)"}" aria-label="${mode === "read" ? "Switch to editing" : "Switch to reading"}">${ico(mode === "read" ? "pencil" : "book")}</button>` : ""}`;
+}
+function renderView(force) {
+  const box = $("#view"); const n = activeNote();
+  if (state.active !== "home") Constellation.stop();
+  if (state.active === "home") {
+    Graph.unmount();
+    if (view.key !== "home") { view.key = "home"; box.innerHTML = `<div class="home-wrap"><div class="home" id="home"></div></div>`; box.scrollTop = 0; }
+    renderHome();
+    return;
+  }
+  if (state.active === "graph") {
+    if (view.key !== "graph") { view.key = "graph"; box.innerHTML = ""; Graph.mount(box); }
+    else Graph.rebuild();
+    return;
+  }
+  Graph.unmount();
+  if (!n) {
+    view.key = "empty";
+    box.innerHTML = `<div class="empty"><div><h2>No note is open</h2><div class="acts">
+      <button data-act="new">Create a new note</button><button data-act="switch">Go to a note <span class="kbd">Ctrl/Cmd P</span></button>
+      <button data-act="graph">Open graph view</button><button data-act="import">Import notes or files</button><button data-act="home">Go to Home</button></div></div></div>`;
+    return;
+  }
+  const mode = n.kind === "file" ? "file" : (state.modes[n.id] || "read");
+  const key = n.id + "|" + mode + "|" + (mode === "edit" ? "" : n.updated + "|" + n.title + "|" + allNotes().length);
+  if (!force && key === view.key) return;
+  if (mode === "edit" && view.key && view.key.startsWith(n.id + "|edit")) {
+    const ta = $("#editor");
+    if (ta && document.activeElement !== ta && !Store.dirty.has(n.id) && ta.value !== n.body) { ta.value = n.body; autosize(ta); }
+    const ti = $("#inline-title"); if (ti && document.activeElement !== ti) ti.value = n.title;
+    view.key = key; return;
+  }
+  const scrollTop = view.key && view.key.split("|")[0] === n.id ? box.scrollTop : 0;
+  view.key = key;
+  if (mode === "file") { box.innerHTML = fileViewHtml(n); bindFileView(n); return; }
+  box.innerHTML = `<div class="doc"><input class="inline-title" id="inline-title" value="${esc(n.title)}" aria-label="Note title" spellcheck="false">
+    ${mode === "edit" ? `<textarea class="editor" id="editor" spellcheck="true" aria-label="Note text" placeholder="Start writing. Type [[ to link to another note, or drop a file here.">${esc(n.body)}</textarea>`
+      : `<div class="md" id="md">${n.body.trim() ? renderMd(n.body) : `<p style="color:var(--faint)">This note is empty. Press the pencil to start writing.</p>`}</div>`}</div>`;
+  bindDoc(n, mode);
+  box.scrollTop = scrollTop;
+}
+function fileViewHtml(n) {
+  const u = n.url ? esc(n.url) : "";
+  let body;
+  if (!u) body = `<div class="empty-note">This file was only kept for your last visit and isn't available now. Drop it in again to add it back.</div>`;
+  else if (/^image\//.test(n.mime)) body = `<img src="${u}" alt="${esc(n.title)}">`;
+  else if (/^video\//.test(n.mime)) body = `<video src="${u}" controls></video>`;
+  else if (/^audio\//.test(n.mime)) body = `<audio src="${u}" controls></audio>`;
+  else if (n.mime === "application/pdf") body = `<iframe src="${u}" title="${esc(n.title)}"></iframe>`;
+  else if (/^text\/|json|csv|xml/.test(n.mime)) body = `<pre class="file-text" id="file-text">Loading…</pre>`;
+  else body = `<div class="empty-note">No preview for this kind of file.</div>`;
+  return `<div class="file-view"><input class="inline-title" id="inline-title" value="${esc(n.title)}" aria-label="File name" style="max-width:900px;text-align:center" spellcheck="false">${body}
+    <div class="file-meta"><span>${esc(n.mime || "file")}</span>${n.size ? `<span>${fmtSize(n.size)}</span>` : ""}${u ? `<a href="${u}" target="_blank" rel="noopener">Open in a new tab</a>` : ""}<span>Embed it in a note with <code>![[${esc(n.title)}]]</code></span></div></div>`;
+}
+function bindFileView(n) {
+  bindTitle(n);
+  const pre = $("#file-text");
+  if (pre && n.url) fetch(n.url).then(r => r.text()).then(t => { pre.textContent = t.slice(0, 200000); }).catch(() => { pre.textContent = "Couldn't load a preview. Use “Open in a new tab”."; });
+}
+function bindTitle(n) {
+  const ti = $("#inline-title"); if (!ti) return;
+  ti.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); const ed = $("#editor"); if (ed) ed.focus(); else ti.blur(); } if (e.key === "Escape") { ti.value = n.title; ti.blur(); } });
+  ti.addEventListener("change", () => renameNote(n, ti.value));
+}
+function bindDoc(n, mode) {
+  bindTitle(n);
+  if (mode === "edit") {
+    const ta = $("#editor");
+    autosize(ta);
+    ta.addEventListener("input", () => { n.body = ta.value; autosize(ta); touch(n, { render: false }); scheduleSide(); maybeSuggest(ta); });
+    ta.addEventListener("keydown", e => suggestKey(e, ta));
+    ta.addEventListener("blur", () => setTimeout(hideSuggest, 150));
+    ta.addEventListener("click", () => maybeSuggest(ta));
+    ta.addEventListener("paste", e => {
+      const files = [...(e.clipboardData && e.clipboardData.files || [])];
+      if (files.length) { e.preventDefault(); importAll(files.map(f => ({ file: f, dir: "" })), n.folder, { insertInto: ta }); }
+    });
+  } else {
+    const md = $("#md");
+    md.addEventListener("change", e => {
+      const cb = e.target.closest("input[data-line]"); if (!cb) return;
+      const lines = n.body.split("\n"); const k = +cb.dataset.line;
+      if (lines[k] !== undefined) {
+        lines[k] = lines[k].replace(/\[( |x|X)\]/, cb.checked ? "[x]" : "[ ]");
+        n.body = lines.join("\n");
+        cb.closest("li").classList.toggle("done", cb.checked);
+        touch(n, { render: false }); view.key = null; renderRight(); renderStatus();
+      }
+    });
+  }
+}
+function autosize(ta) { ta.style.height = "auto"; ta.style.height = Math.max(ta.scrollHeight, window.innerHeight * 0.6) + "px"; }
+let sideT = 0;
+function scheduleSide() { clearTimeout(sideT); sideT = setTimeout(() => { renderRight(); renderStatus(); }, 400); }
+
+function renderRight() {
+  const body = $("#right-body"); const n = activeNote();
+  if (!n) { body.innerHTML = `<div class="empty-note">${state.active === "graph" ? "Click a dot in the graph to open that note. Drag to move it, scroll to zoom." : state.active === "home" ? "Pick a module or your next concept to get started. Notes you open show their progress, links and outline here." : "Open a note to see its progress, links and outline."}</div>`; return; }
+  let html = "";
+  if (n.kind === "note") {
+    html += `<div class="panel-sec"><h4>Progress</h4>${n.status ? `<div class="seg" role="group" aria-label="Status">${Object.keys(STATUS).map(s => `<button data-status="${s}" aria-pressed="${n.status === s}"><span class="dot ${s}"></span>${STATUS[s]}</button>`).join("")}</div>
+      <button class="track-btn" data-status="none" style="margin-top:8px;border-style:solid">Stop tracking this note</button>` : `<button class="track-btn" data-status="new">Track this note as a concept to learn</button>`}</div>`;
+    const tasks = (n.body.match(/^\s*[-*+]\s+\[( |x|X)\]/gm) || []);
+    const doneT = tasks.filter(t => /\[(x|X)\]/.test(t)).length;
+    if (tasks.length) html += `<div class="panel-sec"><h4>Check yourself<span>${doneT}/${tasks.length}</span></h4><div class="bar"><i class="b-done" style="width:${doneT / tasks.length * 100}%"></i></div></div>`;
+  }
+  const bl = backlinksOf(n);
+  html += `<div class="panel-sec"><h4>Backlinks<span>${bl.length}</span></h4>${bl.length ? bl.map(o => `<span class="link-item" data-id="${esc(o.id)}" tabindex="0">${esc(o.title)}<small>${esc(o.folder || "Vault root")}</small></span>`).join("") : `<div class="empty-note">No notes link here yet.</div>`}</div>`;
+  if (n.kind === "note") {
+    const out = linksOf(n);
+    html += `<div class="panel-sec"><h4>Outgoing links<span>${out.length}</span></h4>${out.length ? out.map(t => { const o = findByTitle(t); return o ? `<span class="link-item" data-id="${esc(o.id)}" tabindex="0">${esc(o.title)}<small>${esc(o.folder || "Vault root")}</small></span>` : `<span class="link-item unres" data-create="${esc(t)}" tabindex="0" title="Create this note">${esc(t)}<small>Not created yet. Click to create.</small></span>`; }).join("") : `<div class="empty-note">Link to other notes with [[Note name]].</div>`}</div>`;
+    const hs = headingsOf(n.body);
+    if (hs.length) html += `<div class="panel-sec"><h4>Outline</h4>${hs.map((x, k) => `<span class="outline-item" data-h="${k}" style="padding-left:${8 + (x.lv - 1) * 12}px">${esc(x.text)}</span>`).join("")}</div>`;
+  }
+  if (n.updated) html += `<div class="panel-sec"><dl class="kv"><dt>Edited</dt><dd>${new Date(n.updated).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</dd></dl></div>`;
+  body.innerHTML = html;
+}
+function renderStatus() {
+  const n = activeNote(); const sb = $("#statusbar");
+  let parts = "";
+  if (n && n.kind === "note") {
+    const words = (n.body.match(/\S+/g) || []).length;
+    parts += `<span class="wc">${backlinksOf(n).length} backlinks</span><span class="wc">${words.toLocaleString()} words</span><span class="wc">${n.body.length.toLocaleString()} characters</span>`;
+  }
+  let cls = "ok", label = "";
+  if (Store.mode === "pending") { cls = "warn"; label = "Connecting…"; }
+  else if (Store.dirty.size) { cls = "warn"; label = "Saving…"; }
+  else if (Store.mode === "cloud") { if (Store.slow) { cls = "warn"; label = "Can't reach your saved notes yet"; } else label = "Saved to your account"; }
+  else if (Store.mode === "local") { cls = "warn"; label = "Saved in this browser only"; }
+  else { cls = "bad"; label = "Not saved: changes last for this visit"; }
+  sb.innerHTML = parts + `<span class="sync ${cls}"><i></i>${label}</span>`;
+}
+function renderAll(remote) {
+  state.tabs = state.tabs.filter(t => SPECIAL.has(t) || state.notes.has(t));
+  if (state.active && !state.tabs.includes(state.active)) { state.active = state.tabs[0] || null; view.key = null; }
+  renderLeft(); renderTabs(); renderHeader(); renderView(false); renderRight(); renderStatus();
+  if (remote && state.active === "graph") Graph.rebuild();
+}
+
+/* ---------- home ---------- */
+function themeColors() {
+  const cs = getComputedStyle(document.documentElement); const g = k => cs.getPropertyValue(k).trim();
+  return { text: g("--text"), muted: g("--muted"), faint: g("--faint"), border: g("--border"), accent: g("--accent"), bg: g("--bg"), pal: ["--g1", "--g2", "--g3", "--g4", "--g5", "--g6"].map(g) };
+}
+function topModules() {
+  return [...new Set(allNotes().map(n => n.folder.split("/")[0]).filter(Boolean))].sort((a, b) => folderSortKey(a) - folderSortKey(b) || a.localeCompare(b));
+}
+function moduleColorVar(top) { const k = topModules().indexOf(top); return k < 0 ? "var(--g6)" : `var(--g${(k % 5) + 1})`; }
+function conceptsInOrder() {
+  return allNotes().filter(n => n.status && n.kind === "note")
+    .sort((a, b) => folderSortKey(a.folder.split("/")[0]) - folderSortKey(b.folder.split("/")[0]) || (a.order ?? 9999) - (b.order ?? 9999) || a.title.localeCompare(b.title));
+}
+function nextConcept(list = conceptsInOrder()) { return list.find(n => n.status === "learning") || list.find(n => n.status === "new") || null; }
+function blurb(body) {
+  for (const raw of body.split("\n")) {
+    const l = raw.trim();
+    if (!l || /^(#|>|\||```|-{3}|[-*+]\s|\d+\.\s)/.test(l)) continue;
+    const t = l.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2").replace(/!?\[\[([^\]]+)\]\]/g, "$1").replace(/[*_`=~]/g, "").replace(/#[\w/-]+/g, "").trim();
+    if (t) return t.length > 150 ? t.slice(0, 147).replace(/\s+\S*$/, "") + "…" : t;
+  }
+  return "";
+}
+function ago(ts) {
+  const s = (Date.now() - ts) / 1000;
+  if (s < 60) return "just now"; if (s < 3600) return Math.floor(s / 60) + " min ago"; if (s < 86400) return Math.floor(s / 3600) + " h ago";
+  if (s < 604800) return Math.floor(s / 86400) + " d ago"; return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+function renderHome() {
+  const el = $("#home"); if (!el) return;
+  const hr = new Date().getHours();
+  const greet = hr < 5 ? "Late night" : hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
+  const list = conceptsInOrder(); const nx = nextConcept(list);
+  const p = progressOf(null); const mods = topModules();
+  const pct = p.total ? Math.round(p.mastered / p.total * 100) : 0;
+  const C = 2 * Math.PI * 86; const dm = p.total ? p.mastered / p.total : 0, dl = p.total ? p.learning / p.total : 0;
+  const notesCount = allNotes().filter(n => n.kind === "note").length;
+  const filesCount = allNotes().filter(n => n.kind === "file").length;
+  let links = 0; allNotes().forEach(n => links += linksOf(n).filter(t => findByTitle(t)).length);
+  let tasks = 0, tasksDone = 0; allNotes().forEach(n => { if (n.kind !== "note") return; const m = n.body.match(/^\s*[-*+]\s+\[( |x|X)\]/gm) || []; tasks += m.length; tasksDone += m.filter(x => /\[(x|X)\]/.test(x)).length; });
+  const date = new Date().toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  const nxTop = nx ? nx.folder.split("/")[0] : "";
+  const headline = !p.total ? `${greet}.<br><em>Start a module.</em>` : p.mastered === p.total ? `${greet}.<br><em>Everything mastered.</em>` : p.mastered + p.learning === 0 ? `${greet}.<br><em>Let's begin.</em>` : `${greet}.<br><em>Keep going.</em>`;
+  const recent = allNotes().filter(n => n.updated).sort((a, b) => b.updated - a.updated).slice(0, 6);
+
+  const modCards = mods.map((m, k) => {
+    const pr = progressOf(m);
+    const inMod = list.filter(n => n.folder === m || n.folder.startsWith(m + "/"));
+    const nm = nextConcept(inMod);
+    const hub = allNotes().find(n => n.folder === m && n.title === m) || sortNotes(allNotes().filter(n => n.folder === m), m)[0] || allNotes().find(n => n.folder.startsWith(m + "/"));
+    const w = x => pr.total ? x / pr.total * 100 : 0;
+    const count = allNotes().filter(n => n.folder === m || n.folder.startsWith(m + "/")).length;
+    return `<button class="mod" style="--mc:${moduleColorVar(m)}" ${hub ? `data-open="${esc(hub.id)}"` : ""}>
+      <span class="num">${String(k + 1).padStart(2, "0")}</span>
+      <h3>${esc(m)}</h3>
+      <span class="meta">${pr.total ? `${pr.total} concepts · ${pr.mastered} mastered${pr.learning ? ` · ${pr.learning} learning` : ""}` : `${count} item${count === 1 ? "" : "s"}`}</span>
+      ${pr.total ? `<div class="bar"><i class="b-done" style="width:${w(pr.mastered)}%"></i><i class="b-learn" style="width:${w(pr.learning)}%"></i></div>` : ""}
+      <span class="next">${pr.total ? (nm ? `Next <b>${esc(nm.title)}</b>` : `<b>Module mastered</b>`) : `Your own folder`}</span>
+    </button>`;
+  }).join("");
+
+  el.innerHTML = `
+  <section class="hero" aria-label="Overview">
+    <canvas id="constellation" aria-hidden="true"></canvas>
+    <div>
+      <div class="eyebrow">${esc(date)} · ${p.total} concepts across ${mods.filter(m => progressOf(m).total).length} modules</div>
+      <h1 class="display">${headline}</h1>
+      ${nx ? `<div class="next-card" style="--mc:${moduleColorVar(nxTop)}"><div class="stripe"></div><div>
+        <div class="lbl"><span class="dot ${nx.status}"></span>${nx.status === "learning" ? "Continue learning" : "Next up"} · ${esc(nxTop)}</div>
+        <h3>${esc(nx.title)}</h3>${blurb(nx.body) ? `<p>${esc(blurb(nx.body))}</p>` : ""}
+        <div class="hero-acts"><button class="cta" data-open="${esc(nx.id)}">${nx.status === "learning" ? "Continue" : "Start"} ${ico("chev", "sm")}</button><button class="ghost" data-act="switch">${ico("search", "sm")}Find a note</button><button class="ghost" data-act="graph">${ico("graph", "sm")}Graph</button></div>
+      </div></div>` : `<div class="hero-acts"><button class="cta" data-act="new">New note</button><button class="ghost" data-act="graph">${ico("graph", "sm")}Graph</button></div>`}
+    </div>
+    <div class="ring-box">
+      <div class="ring" role="img" aria-label="${p.mastered} of ${p.total} concepts mastered, ${p.learning} in progress">
+        <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="86" fill="none" stroke="var(--border)" stroke-width="12"/>
+          <circle cx="100" cy="100" r="86" fill="none" stroke="var(--s-learn)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(dm + dl) * C} ${C}" opacity="${dl ? 1 : 0}"/>
+          <circle cx="100" cy="100" r="86" fill="none" stroke="var(--s-done)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${dm * C} ${C}" opacity="${dm ? 1 : 0}"/></svg>
+        <div class="c"><b>${pct}%</b><span>mastered</span></div>
+      </div>
+      <div class="legend"><span><i class="dot mastered"></i>${p.mastered} mastered</span><span><i class="dot learning"></i>${p.learning} learning</span><span><i class="dot"></i>${p.total - p.mastered - p.learning} to go</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="mods-h">
+    <div class="sec-h"><h2 id="mods-h">Modules</h2><span>Open a module to see its suggested order</span></div>
+    <div class="mods">${modCards}<button class="mod add" data-act="folder">${ico("folderPlus")}<span>Add a module</span></button></div>
+  </section>
+
+  <div class="stats">
+    <div><b>${notesCount}</b><span>notes</span></div>
+    <div><b>${links}</b><span>links between notes</span></div>
+    <div><b>${tasksDone}<span style="font-size:18px;color:var(--faint)">/${tasks}</span></b><span>check-yourself tasks done</span></div>
+    <div><b>${filesCount}</b><span>files you've added</span></div>
+  </div>
+
+  <div class="home-row">
+    <section class="panel" aria-labelledby="rec-h">
+      <div class="sec-h"><h2 id="rec-h">Recently edited</h2><span>${recent.length ? "" : "Nothing yet"}</span></div>
+      ${recent.length ? `<div class="recent">${recent.map(n => `<button data-open="${esc(n.id)}"><i style="background:${moduleColorVar(n.folder.split("/")[0])}"></i><span class="t">${esc(n.title)}</span><small>${ago(n.updated)}</small></button>`).join("")}</div>`
+        : `<div class="empty-note" style="padding:0">Notes you edit, tick off or add show up here. Not sure where to begin? <button style="color:var(--link)" data-act="start">Read Start Here</button>.</div>`}
+    </section>
+    <section class="panel" aria-label="Add files">
+      <button class="dropzone" data-act="pick">${ico("upload")}<b>Drop your own material</b><span>Lecture notes, slides, screenshots or a whole folder. Drop anywhere on the page, or click to choose files.</span></button>
+    </section>
+  </div>`;
+  Constellation.mount($("#constellation"));
+}
+
+const Constellation = {
+  cv: null, raf: 0, pts: [], links: [], t0: 0, mx: 0, my: 0, ro: null, C: null, sig: "",
+  readColors() { this.C = themeColors(); },
+  mount(cv) {
+    const sig = allNotes().map(n => n.id + n.status + linksOf(n).length).join("|");
+    const keep = this.cv && this.sig === sig;
+    if (this.ro) this.ro.disconnect();
+    cv.width = 0; this.cv = cv; this.ctx = cv.getContext("2d"); this.readColors();
+    if (!keep) { this.sig = sig; this.build(); this.t0 = performance.now(); }
+    this.ro = new ResizeObserver(() => this.size()); this.ro.observe(cv.parentElement);
+    const hero = cv.parentElement;
+    hero.addEventListener("pointermove", e => { const r = hero.getBoundingClientRect(); this.mx = (e.clientX - r.left) / r.width - .5; this.my = (e.clientY - r.top) / r.height - .5; });
+    this.size();
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) this.loop();
+  },
+  stop() { cancelAnimationFrame(this.raf); this.raf = 0; if (this.ro) this.ro.disconnect(); this.ro = null; this.cv = null; },
+  size() { if (!this.cv) return; const r = this.cv.getBoundingClientRect(), d = devicePixelRatio || 1; this.w = r.width; this.h = r.height; this.cv.width = r.width * d; this.cv.height = r.height * d; this.ctx.setTransform(d, 0, 0, d, 0, 0); this.draw(performance.now()); },
+  build() {
+    const ns = allNotes().filter(n => n.kind === "note"); const mods = topModules();
+    const P = ns.map((n, k) => { const a = k * 2.399, r = 8 + 6 * Math.sqrt(k); return { x: Math.cos(a) * r, y: Math.sin(a) * r, vx: 0, vy: 0, n, top: n.folder.split("/")[0], deg: 0 }; });
+    const by = new Map(ns.map((n, k) => [n.title.toLowerCase(), k])); const L = [];
+    ns.forEach((n, a) => linksOf(n).forEach(t => { const b = by.get(t.toLowerCase()); if (b !== undefined && b !== a) { L.push([a, b]); P[a].deg++; P[b].deg++; } }));
+    for (let it = 0; it < 260; it++) {
+      const al = 1 - it / 260;
+      for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) { const p = P[i], q = P[j]; let dx = q.x - p.x, dy = q.y - p.y, d2 = dx * dx + dy * dy + .01, d = Math.sqrt(d2), f = 260 / d2 * al; p.vx -= dx / d * f; p.vy -= dy / d * f; q.vx += dx / d * f; q.vy += dy / d * f; }
+      for (const [i, j] of L) { const p = P[i], q = P[j], dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1, f = (d - 28) * .03 * al; p.vx += dx / d * f; p.vy += dy / d * f; q.vx -= dx / d * f; q.vy -= dy / d * f; }
+      for (const p of P) { p.vx -= p.x * .01 * al; p.vy -= p.y * .01 * al; p.vx *= .8; p.vy *= .8; p.x += p.vx; p.y += p.vy; }
+    }
+    const R = Math.max(1, ...P.map(p => Math.hypot(p.x, p.y)));
+    P.forEach((p, k) => { p.x /= R; p.y /= R; p.rank = Math.hypot(p.x, p.y); p.ph = k * 1.7; p.ci = mods.indexOf(p.top); });
+    this.pts = P; this.links = L;
+  },
+  loop() { if (this.raf) return; const step = t => { this.raf = 0; if (!this.cv || !this.cv.isConnected) return; this.draw(t); this.raf = requestAnimationFrame(step); }; this.raf = requestAnimationFrame(step); },
+  draw(t) {
+    if (!this.cv || !this.w) return;
+    const c = this.ctx, C = this.C, w = this.w, h = this.h; c.clearRect(0, 0, w, h);
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const el = still ? 1e9 : t - this.t0;
+    const rev = Math.min(1, el / 1800), ease = 1 - Math.pow(1 - rev, 3);
+    const wide = w > 760;
+    const ring = this.cv.parentElement.querySelector('.ring'); const hr0 = this.cv.getBoundingClientRect(); const rr = ring ? ring.getBoundingClientRect() : null;
+    const cx = rr && wide ? rr.left - hr0.left + rr.width / 2 : w * 0.7, cy = (rr && wide ? rr.top - hr0.top + rr.height / 2 : h * 0.5) + this.my * -10, R = wide ? Math.min(h * 0.52, w * 0.36) : Math.min(h * 0.4, w * 0.5);
+    const rot = still ? 0 : el * 0.000025, cr = Math.cos(rot), sr = Math.sin(rot);
+    const pos = this.pts.map(p => ({ x: cx + this.mx * -14 + (p.x * cr - p.y * sr) * R, y: cy + (p.x * sr + p.y * cr) * R }));
+    const vis = p => Math.max(0, Math.min(1, (ease * 1.25 - p.rank) * 4));
+    const base = wide ? 1 : 0.45;
+    c.lineWidth = 1;
+    for (const [i, j] of this.links) {
+      const a = Math.min(vis(this.pts[i]), vis(this.pts[j])); if (!a) continue;
+      c.globalAlpha = a * 0.35 * base; c.strokeStyle = C.faint;
+      c.beginPath(); c.moveTo(pos[i].x, pos[i].y); c.lineTo(pos[j].x, pos[j].y); c.stroke();
+    }
+    this.pts.forEach((p, k) => {
+      const a = vis(p); if (!a) return;
+      const tw = still ? 1 : 0.85 + 0.15 * Math.sin(t / 900 + p.ph);
+      const r = (2.2 + Math.sqrt(p.deg) * 1.1) * tw;
+      const col = p.ci < 0 ? C.muted : C.pal[p.ci % 5];
+      c.globalAlpha = a * base * (p.n.status === "new" ? 0.55 : 1);
+      if (p.n.status === "mastered") { c.globalAlpha = a * base * 0.22; c.fillStyle = col; c.beginPath(); c.arc(pos[k].x, pos[k].y, r * 2.6, 0, 7); c.fill(); c.globalAlpha = a * base; }
+      c.fillStyle = col; c.beginPath(); c.arc(pos[k].x, pos[k].y, r, 0, 7); c.fill();
+    });
+    c.globalAlpha = 1;
+  }
+};
+
+/* ---------- navigation ---------- */
+function openNote(id, { newTab = false, mode } = {}) {
+  if (!state.notes.has(id) && !SPECIAL.has(id)) return;
+  if (mode) state.modes[id] = mode;
+  if (!state.tabs.includes(id)) {
+    const k = state.tabs.indexOf(state.active);
+    if (newTab || k < 0 || SPECIAL.has(state.active)) state.tabs.splice(k + 1, 0, id);
+    else state.tabs[k] = id;
+  }
+  state.active = id;
+  if (!SPECIAL.has(id)) { state.lastNote = id; revealInTree(id); }
+  view.key = null;
+  renderAll();
+  if (innerWidth <= 700) $("#left").hidden = true;
+}
+function revealInTree(id) {
+  const n = state.notes.get(id); if (!n || !n.folder) return;
+  const parts = n.folder.split("/"); let changed = false;
+  for (let k = 1; k <= parts.length; k++) { const f = parts.slice(0, k).join("/"); if (state.collapsed.delete(f)) changed = true; }
+  if (changed) saveCollapsed();
+}
+function closeTab(id) {
+  const k = state.tabs.indexOf(id); if (k < 0) return;
+  state.tabs.splice(k, 1);
+  if (state.active === id) state.active = state.tabs[Math.min(k, state.tabs.length - 1)] || null;
+  view.key = null; renderAll();
+}
+function saveCollapsed() { lsSet("lv-collapsed", JSON.stringify([...state.collapsed])); }
+function toggleMode() {
+  const n = activeNote(); if (!n || n.kind !== "note") return;
+  state.modes[n.id] = (state.modes[n.id] || "read") === "read" ? "edit" : "read";
+  view.key = null; renderHeader(); renderView(true);
+  if (state.modes[n.id] === "edit") { const ta = $("#editor"); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+}
+function openLink(title, newTab) {
+  const n = findByTitle(title);
+  if (n) openNote(n.id, { newTab });
+  else createNote(activeNote() ? activeNote().folder : "My Notes", title);
+}
+
+/* ---------- note operations ---------- */
+function uniqueTitle(base, ignoreId) {
+  let t = base, k = 1;
+  while (allNotes().some(n => n.id !== ignoreId && n.title.toLowerCase() === t.toLowerCase())) t = `${base} ${k++}`;
+  return t;
+}
+function createNote(folder = "My Notes", title = "Untitled", body = "") {
+  const n = { id: newId(), title: uniqueTitle(title.trim() || "Untitled"), folder: folder || "", body, kind: "note", status: null, order: 9999, updated: Date.now(), touched: true };
+  state.notes.set(n.id, n);
+  if (n.folder) state.collapsed.delete(n.folder);
+  Store.queue(n.id);
+  openNote(n.id, { mode: "edit" });
+  const ti = $("#inline-title"); if (ti && title === "Untitled") { ti.focus(); ti.select(); } else { const ta = $("#editor"); if (ta) ta.focus(); }
+  return n;
+}
+function renameNote(n, raw) {
+  let t = raw.replace(/[\[\]|#^\\/:]/g, "").trim();
+  if (!t || t === n.title) { renderView(true); return; }
+  if (allNotes().some(o => o.id !== n.id && o.title.toLowerCase() === t.toLowerCase())) { toast(`A note called “${t}” already exists.`); renderView(true); return; }
+  const old = n.title; n.title = t;
+  const re = new RegExp("(!?\\[\\[)" + old.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?=\\]\\]|\\||#)", "gi");
+  let count = 0;
+  for (const o of allNotes()) {
+    if (o.kind !== "note" || o.id === n.id) continue;
+    const nb = o.body.replace(re, (m, p) => { count++; return p + t; });
+    if (nb !== o.body) { o.body = nb; touch(o, { render: false }); }
+  }
+  touch(n, { render: false }); view.key = null; renderAll();
+  if (count) toast(`Renamed. Updated ${count} link${count > 1 ? "s" : ""} in other notes.`);
+}
+async function deleteNote(n) {
+  const ok = await dialog({ title: `Delete “${n.title}”?`, text: isBuiltin(n.id) ? "This removes it from your vault. Links to it will show as uncreated." : "This can't be undone.", confirm: "Delete", danger: true });
+  if (!ok) return;
+  state.notes.delete(n.id);
+  if (isBuiltin(n.id)) state.deleted.add(n.id);
+  Store.queue(n.id);
+  if (n.assetId && Store.assets) { try { await Store.assets.delete(n.assetId); } catch (e) {} }
+  if (state.tabs.includes(n.id)) closeTab(n.id); else renderAll();
+}
+function moveNote(n, folder) {
+  if ((n.folder || "") === folder) return;
+  n.folder = folder; if (folder) state.collapsed.delete(folder);
+  touch(n);
+}
+function setStatus(n, s) { n.status = s === "none" ? null : s; touch(n); }
+async function newFolder(parent = "") {
+  const name = await dialog({ title: "New folder", text: parent ? `Inside ${parent}` : "Use folders for modules, weeks or topics.", input: "", placeholder: "Folder name", confirm: "Create" });
+  if (!name) return;
+  const clean = name.replace(/[\\/:#|\[\]^]/g, "").trim(); if (!clean) return;
+  const path = parent ? parent + "/" + clean : clean;
+  if (allFolders().has(path)) { toast("That folder already exists."); return; }
+  state.userFolders.add(path); state.collapsed.delete(parent);
+  Store.queue("_meta"); renderLeft();
+}
+async function renameFolder(path) {
+  const name = await dialog({ title: "Rename folder", input: path.split("/").pop(), confirm: "Rename" });
+  if (!name) return;
+  const clean = name.replace(/[\\/:#|\[\]^]/g, "").trim(); if (!clean) return;
+  const np = path.split("/").slice(0, -1).concat(clean).join("/");
+  if (np === path) return;
+  const swap = f => f === path ? np : f.startsWith(path + "/") ? np + f.slice(path.length) : f;
+  allNotes().forEach(n => { const nf = swap(n.folder); if (nf !== n.folder) { n.folder = nf; touch(n, { render: false }); } });
+  state.userFolders = new Set([...state.userFolders].map(swap)); state.userFolders.add(np);
+  if (folderOrder.has(path)) folderOrder.set(np, folderOrder.get(path));
+  Store.queue("_meta"); renderAll();
+}
+async function deleteFolder(path) {
+  const inside = allNotes().filter(n => n.folder === path || n.folder.startsWith(path + "/"));
+  const ok = await dialog({ title: `Delete “${path.split("/").pop()}”?`, text: inside.length ? `This also deletes the ${inside.length} note${inside.length > 1 ? "s" : ""} and files inside it.` : "The folder is empty.", confirm: "Delete", danger: true });
+  if (!ok) return;
+  for (const n of inside) { state.notes.delete(n.id); if (isBuiltin(n.id)) state.deleted.add(n.id); Store.queue(n.id); state.tabs = state.tabs.filter(t => t !== n.id); }
+  state.userFolders = new Set([...state.userFolders].filter(f => f !== path && !f.startsWith(path + "/")));
+  Store.queue("_meta");
+  if (!state.tabs.includes(state.active)) state.active = state.tabs[0] || null;
+  view.key = null; renderAll();
+}
+
+/* ---------- import (drag & drop, file picker, paste) ---------- */
+const TEXT_NOTE = /\.(md|markdown|txt)$/i;
+function collectDropped(dt) {
+  const items = [...(dt.items || [])].filter(i => i.kind === "file");
+  const entries = items.map(i => i.webkitGetAsEntry ? i.webkitGetAsEntry() : null);
+  if (!entries.length || entries.some(e => !e)) return Promise.resolve([...dt.files].map(f => ({ file: f, dir: "" })));
+  const out = [];
+  const walk = async (entry, dir) => {
+    if (entry.name.startsWith(".")) return;
+    if (entry.isFile) { try { out.push({ file: await new Promise((res, rej) => entry.file(res, rej)), dir }); } catch (e) {} }
+    else if (entry.isDirectory) {
+      const reader = entry.createReader(); const sub = dir ? dir + "/" + entry.name : entry.name;
+      let batch;
+      do { batch = await new Promise((res, rej) => reader.readEntries(res, rej)).catch(() => []); for (const e of batch) await walk(e, sub); } while (batch.length);
+    }
+  };
+  return (async () => { for (const e of entries) await walk(e, ""); return out; })();
+}
+async function importAll(list, target, { insertInto } = {}) {
+  if (!list.length) return;
+  const made = []; let ephemeral = 0, failed = 0;
+  for (const { file, dir } of list) {
+    const folder = [target, dir].filter(Boolean).join("/");
+    try {
+      if (TEXT_NOTE.test(file.name)) {
+        let text = await file.text();
+        if (text.length > 240000) { text = text.slice(0, 240000); toast(`${file.name} was very long, so only the first part was imported.`); }
+        const n = { id: newId(), title: uniqueTitle(file.name.replace(TEXT_NOTE, "").replace(/[\[\]|#^]/g, "")), folder, body: text, kind: "note", status: null, order: 9999, updated: Date.now(), touched: true };
+        state.notes.set(n.id, n); Store.queue(n.id); made.push(n);
+      } else {
+        const n = { id: newId(), title: uniqueTitle(file.name.replace(/[\[\]|#^]/g, "")), folder, body: "", kind: "file", status: null, mime: file.type || "application/octet-stream", size: file.size, order: 9999, updated: Date.now(), touched: true };
+        let stored = false;
+        if (Store.assets && file.size <= 20 * 1024 * 1024) {
+          try { const a = await Store.assets.upload(file); n.assetId = a.id; n.url = a.url || "/_blob/" + a.id; if (a.contentType) n.mime = a.contentType; stored = true; }
+          catch (e) { if (e && /quota|exhaust/i.test(String(e.code || e.message))) toast("File storage is full. Delete some files to add more."); }
+        }
+        if (!stored) { n.url = URL.createObjectURL(file); n.ephemeral = true; ephemeral++; }
+        state.notes.set(n.id, n); if (!n.ephemeral) Store.queue(n.id); made.push(n);
+      }
+    } catch (e) { failed++; }
+  }
+  if (target) state.collapsed.delete(target);
+  [...new Set(made.map(n => n.folder))].forEach(f => { const p = f.split("/"); for (let k = 1; k <= p.length; k++) state.collapsed.delete(p.slice(0, k).join("/")); });
+  saveCollapsed();
+  if (insertInto && made.length) {
+    const ta = insertInto, s = ta.selectionStart;
+    const ins = made.map(n => `![[${n.title}]]`).join("\n");
+    ta.value = ta.value.slice(0, s) + ins + ta.value.slice(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = s + ins.length;
+    ta.dispatchEvent(new Event("input"));
+    renderLeft();
+  } else if (made.length) {
+    if (made.length === 1) openNote(made[0].id, { newTab: true }); else renderAll();
+  }
+  let msg = made.length ? `Added ${made.length} item${made.length > 1 ? "s" : ""}${target ? ` to ${target}` : ""}.` : "Nothing was imported.";
+  if (ephemeral) msg += ` ${ephemeral} file${ephemeral > 1 ? "s" : ""} can only be kept for this visit here.`;
+  if (failed) msg += ` ${failed} couldn't be read.`;
+  toast(msg);
+}
+
+let dragDepth = 0;
+const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes("Files");
+const INTERNAL = "application/x-vault-id";
+document.addEventListener("dragenter", e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault(); dragDepth++;
+  $("#drop-overlay").classList.add("show");
+});
+document.addEventListener("dragleave", e => {
+  if (!hasFiles(e)) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) { $("#drop-overlay").classList.remove("show"); clearDropMarks(); }
+});
+document.addEventListener("dragover", e => {
+  const ext = hasFiles(e), internal = e.dataTransfer && [...e.dataTransfer.types].includes(INTERNAL);
+  if (!ext && !internal) return;
+  e.preventDefault();
+  clearDropMarks();
+  const f = e.target.closest && e.target.closest("[data-folder]");
+  const ta = e.target.closest && e.target.closest("#editor");
+  if (f) { f.querySelector(".row").classList.add("drop-target"); }
+  if (ext) {
+    $("#drop-title").textContent = f ? `Drop into ${f.dataset.folder}` : ta ? "Drop to embed in this note" : "Drop to add to your vault";
+    const n = activeNote();
+    $("#drop-sub").textContent = f || ta ? ".md and .txt become notes. Other files become attachments." : `Goes into ${n && n.folder ? n.folder : "My Notes"}. Drop onto a folder in the tree to choose.`;
+  }
+  e.dataTransfer.dropEffect = internal ? "move" : "copy";
+});
+function clearDropMarks() { document.querySelectorAll(".drop-target").forEach(x => x.classList.remove("drop-target")); }
+document.addEventListener("drop", e => {
+  const internalId = e.dataTransfer && e.dataTransfer.getData(INTERNAL);
+  const f = e.target.closest && e.target.closest("[data-folder]");
+  if (internalId) {
+    e.preventDefault(); clearDropMarks();
+    const n = state.notes.get(internalId);
+    if (n) moveNote(n, f ? f.dataset.folder : (e.target.closest("#left-body") ? "" : n.folder));
+    return;
+  }
+  if (!hasFiles(e)) return;
+  e.preventDefault(); dragDepth = 0;
+  $("#drop-overlay").classList.remove("show"); clearDropMarks();
+  const ta = e.target.closest && e.target.closest("#editor");
+  const n = activeNote();
+  const target = f ? f.dataset.folder : (n ? n.folder || (ta ? "" : "My Notes") : "My Notes");
+  collectDropped(e.dataTransfer).then(list => importAll(list, target, { insertInto: ta || null }));
+});
+let pickTarget = null;
+function pickFiles(folder) { pickTarget = folder; $("#file-input").click(); }
+$("#file-input").addEventListener("change", e => {
+  const files = [...e.target.files]; e.target.value = "";
+  const n = activeNote();
+  const target = pickTarget !== null ? pickTarget : (n && n.folder ? n.folder : "My Notes");
+  pickTarget = null;
+  importAll(files.map(f => ({ file: f, dir: "" })), target);
+});
+
+/* ---------- link suggestions while editing ---------- */
+const sug = { el: null, items: [], sel: 0, start: 0 };
+function caretXY(ta, pos) {
+  const d = document.createElement("div"); const cs = getComputedStyle(ta);
+  ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "paddingTop", "paddingLeft", "paddingRight", "boxSizing", "tabSize"].forEach(p => d.style[p] = cs[p]);
+  Object.assign(d.style, { position: "absolute", visibility: "hidden", whiteSpace: "pre-wrap", wordWrap: "break-word", width: ta.offsetWidth + "px", top: "0", left: "-9999px" });
+  d.textContent = ta.value.slice(0, pos);
+  const sp = document.createElement("span"); sp.textContent = "​"; d.appendChild(sp);
+  document.body.appendChild(d);
+  const r = { top: sp.offsetTop, left: sp.offsetLeft, h: parseFloat(cs.lineHeight) || 24 };
+  d.remove(); return r;
+}
+function maybeSuggest(ta) {
+  const pos = ta.selectionStart; const before = ta.value.slice(0, pos);
+  const m = before.match(/\[\[([^\]\n|#]*)$/);
+  if (!m) return hideSuggest();
+  const q = m[1].toLowerCase();
+  const cur = activeNote();
+  sug.items = allNotes().filter(n => n.id !== (cur && cur.id) && n.title.toLowerCase().includes(q))
+    .sort((a, b) => (a.title.toLowerCase().startsWith(q) ? 0 : 1) - (b.title.toLowerCase().startsWith(q) ? 0 : 1) || a.title.localeCompare(b.title)).slice(0, 8);
+  sug.start = pos - m[1].length; sug.ta = ta;
+  if (!sug.items.length && !q) return hideSuggest();
+  if (!sug.el) { sug.el = document.createElement("div"); sug.el.className = "suggest"; sug.el.addEventListener("mousedown", e => { e.preventDefault(); const it = e.target.closest("[data-k]"); if (it) acceptSuggest(+it.dataset.k); }); }
+  ta.parentElement.appendChild(sug.el);
+  sug.sel = Math.min(sug.sel, Math.max(0, sug.items.length - 1));
+  sug.el.innerHTML = (sug.items.length ? sug.items.map((n, k) => `<div data-k="${k}" class="${k === sug.sel ? "sel" : ""}"><span>${esc(n.title)}</span><small>${esc(n.folder || "")}</small></div>`).join("") : "") + (q && !findByTitle(m[1]) ? `<div data-k="-1" class="${sug.items.length ? "" : "sel"}"><span>Link to new note “${esc(m[1])}”</span></div>` : "");
+  const c = caretXY(ta, pos);
+  sug.el.style.top = (ta.offsetTop + c.top + c.h + 4) + "px";
+  sug.el.style.left = Math.min(ta.offsetLeft + c.left, ta.offsetLeft + ta.offsetWidth - 260) + "px";
+}
+function hideSuggest() { if (sug.el) sug.el.remove(); sug.items = []; sug.sel = 0; sug.ta = null; }
+function suggestKey(e, ta) {
+  if (!sug.ta || !sug.el || !sug.el.isConnected) return;
+  const count = sug.el.querySelectorAll("[data-k]").length;
+  if (e.key === "ArrowDown") { e.preventDefault(); sug.sel = (sug.sel + 1) % count; maybeSuggest(ta); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); sug.sel = (sug.sel - 1 + count) % count; maybeSuggest(ta); }
+  else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); acceptSuggest(sug.sel < sug.items.length ? sug.sel : -1); }
+  else if (e.key === "Escape") { hideSuggest(); }
+}
+function acceptSuggest(k) {
+  const ta = sug.ta; if (!ta) return;
+  const pos = ta.selectionStart;
+  const typed = ta.value.slice(sug.start, pos);
+  const title = k >= 0 && sug.items[k] ? sug.items[k].title : typed;
+  const after = ta.value.slice(pos);
+  const close = after.startsWith("]]") ? "" : "]]";
+  ta.value = ta.value.slice(0, sug.start) + title + close + after;
+  const np = sug.start + title.length + 2;
+  ta.selectionStart = ta.selectionEnd = np;
+  hideSuggest();
+  ta.dispatchEvent(new Event("input"));
+}
+
+/* ---------- graph view ---------- */
+const Graph = {
+  wrap: null, cv: null, ctx: null, nodes: [], links: [], pos: new Map(), alpha: 1,
+  scale: 1, tx: 0, ty: 0, hover: null, drag: null, pan: null, raf: 0, ro: null, colors: {},
+  mount(box) {
+    box.innerHTML = `<div class="graph-wrap"><canvas aria-label="Graph of notes and links" role="img"></canvas><div class="graph-legend" id="g-legend"></div><div class="graph-hint">Click a dot to open it · drag to move · scroll to zoom</div></div>`;
+    this.wrap = box.firstElementChild; this.cv = this.wrap.querySelector("canvas"); this.ctx = this.cv.getContext("2d");
+    this.ro = new ResizeObserver(() => this.size()); this.ro.observe(this.wrap);
+    this.bind(); this.rebuild(); this.size();
+  },
+  unmount() { if (!this.wrap) return; cancelAnimationFrame(this.raf); this.raf = 0; if (this.ro) this.ro.disconnect(); this.wrap = null; },
+  size() {
+    if (!this.wrap) return;
+    const r = this.wrap.getBoundingClientRect(), d = devicePixelRatio || 1;
+    this.w = r.width; this.h = r.height;
+    this.cv.width = r.width * d; this.cv.height = r.height * d;
+    this.ctx.setTransform(d, 0, 0, d, 0, 0); this.draw();
+  },
+  readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    const g = k => cs.getPropertyValue(k).trim();
+    this.colors = { text: g("--text"), muted: g("--muted"), faint: g("--faint"), border: g("--border"), accent: g("--accent"), bg: g("--bg"), pal: ["--g1", "--g2", "--g3", "--g4", "--g5", "--g6"].map(g) };
+  },
+  rebuild() {
+    if (!this.wrap) return;
+    this.readColors();
+    const ns = allNotes().filter(n => n.kind === "note");
+    const tops = [...new Set(ns.map(n => n.folder.split("/")[0] || ""))].sort((a, b) => (a ? folderSortKey(a) : -1) - (b ? folderSortKey(b) : -1));
+    const colorOf = f => f === "" ? this.colors.muted : this.colors.pal[tops.filter(Boolean).indexOf(f) % 5];
+    const byTitle = new Map(ns.map(n => [n.title.toLowerCase(), n]));
+    this.nodes = ns.map((n, k) => {
+      let p = this.pos.get(n.id);
+      if (!p) { const a = k * 2.399; const r = 30 + 12 * Math.sqrt(k); p = { x: Math.cos(a) * r, y: Math.sin(a) * r, vx: 0, vy: 0 }; this.pos.set(n.id, p); }
+      p.id = n.id; p.title = n.title; p.top = n.folder.split("/")[0] || ""; p.color = colorOf(p.top); p.deg = 0; p.status = n.status;
+      return p;
+    });
+    const idx = new Map(this.nodes.map((p, k) => [p.id, k]));
+    this.links = [];
+    for (const n of ns) for (const t of linksOf(n)) { const o = byTitle.get(t.toLowerCase()); if (o && o.id !== n.id) { const a = idx.get(n.id), b = idx.get(o.id); this.links.push([a, b]); this.nodes[a].deg++; this.nodes[b].deg++; } }
+    $("#g-legend", this.wrap).innerHTML = tops.map(t => `<div><i style="background:${colorOf(t)}"></i>${esc(t || "Vault root")}</div>`).join("");
+    this.alpha = Math.max(this.alpha, 0.6);
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { for (let k = 0; k < 300; k++) this.tick(); this.alpha = 0; this.draw(); }
+    else this.loop();
+  },
+  loop() { if (this.raf || !this.wrap) return; const step = () => { this.raf = 0; if (!this.wrap) return; this.tick(); this.draw(); if (this.alpha > 0.005 || this.drag) this.raf = requestAnimationFrame(step); }; this.raf = requestAnimationFrame(step); },
+  tick() {
+    const N = this.nodes, a = this.alpha || 0.3;
+    for (let i = 0; i < N.length; i++) for (let j = i + 1; j < N.length; j++) {
+      const p = N[i], q = N[j]; let dx = q.x - p.x, dy = q.y - p.y; let d2 = dx * dx + dy * dy;
+      if (d2 < 1) { dx = Math.random() - .5; dy = Math.random() - .5; d2 = 1; }
+      if (d2 > 160000) continue;
+      const f = 2600 / d2 * a, d = Math.sqrt(d2);
+      p.vx -= dx / d * f; p.vy -= dy / d * f; q.vx += dx / d * f; q.vy += dy / d * f;
+    }
+    for (const [i, j] of this.links) {
+      const p = N[i], q = N[j]; const dx = q.x - p.x, dy = q.y - p.y; const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      const f = (d - 95) * 0.03 * a; p.vx += dx / d * f; p.vy += dy / d * f; q.vx -= dx / d * f; q.vy -= dy / d * f;
+    }
+    for (const p of N) {
+      p.vx -= p.x * 0.004 * a; p.vy -= p.y * 0.004 * a;
+      if (this.drag && this.drag.node === p) { p.vx = p.vy = 0; continue; }
+      p.vx *= 0.8; p.vy *= 0.8; p.x += p.vx; p.y += p.vy;
+    }
+    this.alpha *= 0.985;
+  },
+  rOf(p) { return 4 + Math.sqrt(p.deg) * 1.7; },
+  draw() {
+    if (!this.wrap) return;
+    const c = this.ctx, C = this.colors; c.clearRect(0, 0, this.w, this.h);
+    c.save(); c.translate(this.w / 2 + this.tx, this.h / 2 + this.ty); c.scale(this.scale, this.scale);
+    const hv = this.hover; const near = new Set();
+    if (hv) { near.add(hv); for (const [i, j] of this.links) { if (this.nodes[i] === hv) near.add(this.nodes[j]); if (this.nodes[j] === hv) near.add(this.nodes[i]); } }
+    c.lineWidth = 1 / this.scale;
+    for (const [i, j] of this.links) {
+      const p = this.nodes[i], q = this.nodes[j]; const on = hv && (p === hv || q === hv);
+      c.strokeStyle = on ? C.accent : C.border; c.globalAlpha = hv && !on ? 0.35 : 1;
+      c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(q.x, q.y); c.stroke();
+    }
+    for (const p of this.nodes) {
+      const dim = hv && !near.has(p); c.globalAlpha = dim ? 0.25 : 1;
+      c.fillStyle = p.id === state.lastNote ? C.accent : p.color;
+      c.beginPath(); c.arc(p.x, p.y, this.rOf(p), 0, 7); c.fill();
+      if (p.status === "mastered") { c.strokeStyle = C.bg; c.lineWidth = 1.6 / this.scale; c.beginPath(); c.arc(p.x, p.y, this.rOf(p) * 0.45, 0, 7); c.stroke(); c.lineWidth = 1 / this.scale; }
+    }
+    const fs = 11 / Math.max(this.scale, 0.6);
+    c.font = `${fs}px ${getComputedStyle(document.body).fontFamily}`; c.textAlign = "center"; c.textBaseline = "top";
+    for (const p of this.nodes) {
+      const show = near.has(p) || (this.scale > 0.75 && (!hv)) || p.deg >= 6;
+      if (!show) continue;
+      c.globalAlpha = hv && !near.has(p) ? 0.2 : 1;
+      c.fillStyle = p === hv ? C.text : C.muted;
+      c.fillText(p.title, p.x, p.y + this.rOf(p) + 3);
+    }
+    c.restore(); c.globalAlpha = 1;
+  },
+  toWorld(e) { const r = this.cv.getBoundingClientRect(); return { x: (e.clientX - r.left - this.w / 2 - this.tx) / this.scale, y: (e.clientY - r.top - this.h / 2 - this.ty) / this.scale }; },
+  hit(e) { const w = this.toWorld(e); let best = null, bd = Infinity; for (const p of this.nodes) { const d = Math.hypot(p.x - w.x, p.y - w.y); if (d < this.rOf(p) + 5 / this.scale && d < bd) { best = p; bd = d; } } return best; },
+  bind() {
+    const cv = this.cv;
+    cv.addEventListener("pointerdown", e => {
+      cv.setPointerCapture(e.pointerId);
+      const p = this.hit(e); const sx = e.clientX, sy = e.clientY;
+      if (p) { this.drag = { node: p, sx, sy, moved: false }; this.alpha = Math.max(this.alpha, 0.3); this.loop(); }
+      else this.pan = { sx, sy, tx: this.tx, ty: this.ty };
+      cv.classList.add("dragging");
+    });
+    cv.addEventListener("pointermove", e => {
+      if (this.drag) { const w = this.toWorld(e); const p = this.drag.node; p.x = w.x; p.y = w.y; if (Math.hypot(e.clientX - this.drag.sx, e.clientY - this.drag.sy) > 4) this.drag.moved = true; this.alpha = Math.max(this.alpha, 0.2); this.loop(); return; }
+      if (this.pan) { this.tx = this.pan.tx + e.clientX - this.pan.sx; this.ty = this.pan.ty + e.clientY - this.pan.sy; this.draw(); return; }
+      const h = this.hit(e); if (h !== this.hover) { this.hover = h; cv.style.cursor = h ? "pointer" : ""; this.draw(); }
+    });
+    const up = e => {
+      if (this.drag && !this.drag.moved) { const id = this.drag.node.id; this.drag = null; cv.classList.remove("dragging"); openNote(id, { newTab: true }); return; }
+      this.drag = null; this.pan = null; cv.classList.remove("dragging");
+    };
+    cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+    cv.addEventListener("pointerleave", () => { if (this.hover && !this.drag) { this.hover = null; this.draw(); } });
+    cv.addEventListener("wheel", e => {
+      e.preventDefault();
+      const r = cv.getBoundingClientRect(); const mx = e.clientX - r.left - this.w / 2, my = e.clientY - r.top - this.h / 2;
+      const k = Math.exp(-e.deltaY * 0.0015); const ns = Math.min(4, Math.max(0.2, this.scale * k)); const f = ns / this.scale;
+      this.tx = mx - (mx - this.tx) * f; this.ty = my - (my - this.ty) * f; this.scale = ns; this.draw();
+    }, { passive: false });
+  }
+};
+
+/* ---------- dialogs, menus, switcher, toasts ---------- */
+function dialog({ title, text = "", input, placeholder = "", confirm = "OK", danger = false }) {
+  return new Promise(resolve => {
+    const bg = document.createElement("div"); bg.className = "modal-bg";
+    bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="dlg-t"><div class="dialog"><h3 id="dlg-t">${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ""}${input !== undefined ? `<input id="dlg-in" value="${esc(input)}" placeholder="${esc(placeholder)}" autocomplete="off">` : ""}<div class="btns"><button class="btn" data-r="0">Cancel</button><button class="btn ${danger ? "danger" : "primary"}" data-r="1">${esc(confirm)}</button></div></div></div>`;
+    document.body.appendChild(bg);
+    const inp = $("#dlg-in", bg);
+    const done = ok => { bg.remove(); resolve(ok ? (inp ? inp.value.trim() : true) : (inp ? null : false)); };
+    bg.addEventListener("click", e => { if (e.target === bg) done(false); const b = e.target.closest("[data-r]"); if (b) done(b.dataset.r === "1"); });
+    bg.addEventListener("keydown", e => { if (e.key === "Escape") done(false); if (e.key === "Enter") { e.preventDefault(); done(true); } });
+    (inp || bg.querySelector('[data-r="1"]')).focus(); if (inp) inp.select();
+  });
+}
+let ctxEl = null;
+function closeCtx() { if (ctxEl) ctxEl.remove(); ctxEl = null; }
+function showCtx(x, y, items) {
+  closeCtx(); ctxEl = document.createElement("div"); ctxEl.className = "ctx"; ctxEl.setAttribute("role", "menu");
+  ctxEl.innerHTML = items.map((it, k) => it === "-" ? "<hr>" : `<button role="menuitem" data-k="${k}" class="${it.danger ? "danger" : ""}">${ico(it.icon, "sm")}${esc(it.label)}</button>`).join("");
+  document.body.appendChild(ctxEl);
+  const r = ctxEl.getBoundingClientRect();
+  ctxEl.style.left = Math.min(x, innerWidth - r.width - 8) + "px"; ctxEl.style.top = Math.min(y, innerHeight - r.height - 8) + "px";
+  ctxEl.addEventListener("click", e => { const b = e.target.closest("[data-k]"); if (!b) return; const it = items[+b.dataset.k]; closeCtx(); it.run(); });
+  ctxEl.querySelector("button").focus();
+}
+document.addEventListener("click", e => { if (ctxEl && !ctxEl.contains(e.target)) closeCtx(); });
+document.addEventListener("scroll", closeCtx, true);
+
+function openSwitcher() {
+  if ($(".modal-bg")) return;
+  const bg = document.createElement("div"); bg.className = "modal-bg";
+  bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Quick switcher"><input class="q" id="sw-q" placeholder="Find or create a note…" autocomplete="off"><div class="list" id="sw-list" role="listbox"></div><div class="foot"><span><span class="kbd">↑↓</span> to move</span><span><span class="kbd">↵</span> to open</span><span><span class="kbd">esc</span> to close</span></div></div>`;
+  document.body.appendChild(bg);
+  const q = $("#sw-q", bg), list = $("#sw-list", bg); let sel = 0, items = [];
+  const draw = () => {
+    const s = q.value.trim().toLowerCase();
+    items = allNotes().filter(n => !s || n.title.toLowerCase().includes(s) || (n.folder || "").toLowerCase().includes(s))
+      .sort((a, b) => (s ? (a.title.toLowerCase().startsWith(s) ? 0 : 1) - (b.title.toLowerCase().startsWith(s) ? 0 : 1) : 0) || (b.updated || 0) - (a.updated || 0) || a.title.localeCompare(b.title)).slice(0, 40).map(n => ({ n }));
+    if (s && !findByTitle(q.value.trim())) items.push({ create: q.value.trim() });
+    sel = Math.min(sel, items.length - 1); if (sel < 0) sel = 0;
+    list.innerHTML = items.map((it, k) => `<div class="opt${k === sel ? " sel" : ""}" data-k="${k}" role="option" aria-selected="${k === sel}">${it.n ? `<span>${esc(it.n.title)}</span><small>${esc(it.n.folder || "")}</small>` : `<span>Create note “${esc(it.create)}”</span><small>in My Notes</small>`}</div>`).join("") || `<div class="empty-note">No notes yet.</div>`;
+    const el = list.querySelector(".sel"); if (el) el.scrollIntoView({ block: "nearest" });
+  };
+  const pick = k => { const it = items[k]; bg.remove(); if (!it) return; if (it.n) openNote(it.n.id); else createNote("My Notes", it.create); };
+  q.addEventListener("input", () => { sel = 0; draw(); });
+  q.addEventListener("keydown", e => {
+    if (e.key === "ArrowDown") { e.preventDefault(); sel = (sel + 1) % Math.max(items.length, 1); draw(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); sel = (sel - 1 + items.length) % Math.max(items.length, 1); draw(); }
+    else if (e.key === "Enter") { e.preventDefault(); pick(sel); }
+    else if (e.key === "Escape") bg.remove();
+  });
+  list.addEventListener("click", e => { const o = e.target.closest("[data-k]"); if (o) pick(+o.dataset.k); });
+  bg.addEventListener("mousedown", e => { if (e.target === bg) bg.remove(); });
+  draw(); q.focus();
+}
+function toast(msg) {
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  $("#toasts").appendChild(t); setTimeout(() => t.remove(), 4200);
+}
+
+/* ---------- events ---------- */
+function setIcons() {
+  const set = (id, n) => { $(id).innerHTML = ico(n); };
+  set("#rb-left", "panelL"); set("#rb-switch", "switcher"); set("#rb-graph", "graph"); set("#rb-new", "edit"); set("#rb-import", "upload");
+  set("#rb-home", "home"); set("#rb-right", "panelR"); set("#lt-files", "folder"); set("#lt-search", "search"); set("#lt-newnote", "filePlus"); set("#lt-newfolder", "folderPlus");
+}
+function newNoteHere() { const n = activeNote(); createNote(n ? n.folder || "My Notes" : "My Notes"); }
+function home() { openNote("home"); }
+function bindUi() {
+  $("#rb-left").onclick = () => { $("#left").hidden = !$("#left").hidden; };
+  $("#rb-right").onclick = () => { $("#right").hidden = !$("#right").hidden; };
+  $("#rb-switch").onclick = openSwitcher;
+  $("#rb-graph").onclick = () => openNote("graph", { newTab: true });
+  $("#rb-new").onclick = newNoteHere;
+  $("#rb-import").onclick = () => pickFiles(null);
+  $("#rb-home").onclick = home;
+  $("#lt-files").onclick = () => { state.left = "files"; $("#left-body").innerHTML = ""; renderLeft(); };
+  $("#lt-search").onclick = () => { state.left = "search"; $("#left-body").innerHTML = ""; renderLeft(); $("#search-in").focus(); };
+  $("#lt-newnote").onclick = newNoteHere;
+  $("#lt-newfolder").onclick = () => newFolder("");
+
+  const left = $("#left-body");
+  left.addEventListener("click", e => {
+    const row = e.target.closest("[data-folder-row]");
+    if (row) { const f = row.dataset.folderRow; state.collapsed.has(f) ? state.collapsed.delete(f) : state.collapsed.add(f); saveCollapsed(); renderLeft(); return; }
+    const it = e.target.closest("[data-id]");
+    if (it) openNote(it.dataset.id, { newTab: e.ctrlKey || e.metaKey });
+  });
+  left.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { const t = e.target.closest("[data-folder-row],[data-id]"); if (t) { e.preventDefault(); t.click(); } } });
+  left.addEventListener("contextmenu", e => {
+    const it = e.target.closest(".tree-note"); const fr = e.target.closest("[data-folder-row]");
+    if (it) {
+      e.preventDefault(); const n = state.notes.get(it.dataset.id); if (!n) return;
+      showCtx(e.clientX, e.clientY, [
+        { icon: "file", label: "Open in new tab", run: () => openNote(n.id, { newTab: true }) },
+        { icon: "edit", label: "Rename", run: async () => { const t = await dialog({ title: "Rename", input: n.title, confirm: "Rename" }); if (t) renameNote(n, t); } },
+        ...(n.kind === "note" ? [{ icon: "check", label: n.status ? "Stop tracking progress" : "Track as a concept", run: () => setStatus(n, n.status ? "none" : "new") }] : []),
+        "-", { icon: "trash", label: "Delete", danger: true, run: () => deleteNote(n) }
+      ]);
+    } else if (fr) {
+      e.preventDefault(); const f = fr.dataset.folderRow;
+      showCtx(e.clientX, e.clientY, [
+        { icon: "filePlus", label: "New note here", run: () => createNote(f) },
+        { icon: "folderPlus", label: "New folder inside", run: () => newFolder(f) },
+        { icon: "upload", label: "Import files here", run: () => pickFiles(f) },
+        { icon: "edit", label: "Rename folder", run: () => renameFolder(f) },
+        "-", { icon: "trash", label: "Delete folder", danger: true, run: () => deleteFolder(f) }
+      ]);
+    }
+  });
+  left.addEventListener("dragstart", e => {
+    const it = e.target.closest(".tree-note"); if (!it) return;
+    e.dataTransfer.setData(INTERNAL, it.dataset.id); e.dataTransfer.effectAllowed = "move";
+  });
+
+  $("#tabbar").addEventListener("click", e => {
+    const x = e.target.closest("[data-close]"); if (x) { e.stopPropagation(); closeTab(x.dataset.close); return; }
+    if (e.target.closest("#tab-add")) { newNoteHere(); return; }
+    const t = e.target.closest("[data-tab]"); if (t && t.dataset.tab !== state.active) { state.active = t.dataset.tab; view.key = null; renderAll(); }
+  });
+  $("#tabbar").addEventListener("auxclick", e => { const t = e.target.closest("[data-tab]"); if (t && e.button === 1) closeTab(t.dataset.tab); });
+
+  $("#view-header").addEventListener("click", e => {
+    const n = activeNote();
+    if (e.target.closest("#mode-btn")) toggleMode();
+    if (e.target.closest("#status-pill") && n) setStatus(n, STATUS_NEXT[n.status] || "new");
+  });
+
+  $("#view").addEventListener("click", e => {
+    const a = e.target.closest("a.internal-link"); if (a) { e.preventDefault(); openLink(a.dataset.target, e.ctrlKey || e.metaKey); return; }
+    const tg = e.target.closest("a.tag"); if (tg) { e.preventDefault(); state.left = "search"; state.query = "#" + tg.dataset.tag; $("#left").hidden = false; $("#left-body").innerHTML = ""; renderLeft(); return; }
+    const op = e.target.closest("[data-open]"); if (op) { openNote(op.dataset.open, { newTab: true }); return; }
+    const act = e.target.closest("[data-act]");
+    if (act) ({ new: newNoteHere, switch: openSwitcher, graph: () => openNote("graph", { newTab: true }), import: () => pickFiles(null), home, pick: () => pickFiles("My Notes"), folder: () => newFolder(""), start: () => { const s = findByTitle("Start Here"); if (s) openNote(s.id, { newTab: true }); } })[act.dataset.act]();
+  });
+  $("#view").addEventListener("dblclick", e => {
+    const n = activeNote(); if (!n || n.kind !== "note" || (state.modes[n.id] || "read") !== "read") return;
+    if (e.target.closest("a,input,button")) return;
+    if (e.target.closest("#md")) toggleMode();
+  });
+
+  $("#right-body").addEventListener("click", e => {
+    const n = activeNote();
+    const st = e.target.closest("[data-status]"); if (st && n) { setStatus(n, st.dataset.status); return; }
+    const li = e.target.closest("[data-id]"); if (li) { openNote(li.dataset.id); return; }
+    const cr = e.target.closest("[data-create]"); if (cr) { createNote(n ? n.folder : "My Notes", cr.dataset.create); return; }
+    const oh = e.target.closest("[data-h]");
+    if (oh && n) {
+      if ((state.modes[n.id] || "read") === "edit") toggleMode();
+      const h = document.querySelector(`#md [data-h="${oh.dataset.h}"]`); if (h) h.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+  $("#right-body").addEventListener("keydown", e => { if (e.key === "Enter") { const t = e.target.closest("[data-id],[data-create]"); if (t) t.click(); } });
+  $("#left-body").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest(".result")) e.target.click(); });
+
+  document.addEventListener("keydown", e => {
+    const mod = e.ctrlKey || e.metaKey; const k = e.key.toLowerCase();
+    if (mod && (k === "p" || k === "k" || k === "o")) { e.preventDefault(); openSwitcher(); }
+    else if (mod && k === "e") { e.preventDefault(); toggleMode(); }
+    else if (mod && k === "g") { e.preventDefault(); openNote("graph", { newTab: true }); }
+    else if (e.altKey && k === "n") { e.preventDefault(); newNoteHere(); }
+    else if (e.altKey && k === "w" && state.active) { e.preventDefault(); closeTab(state.active); }
+    else if (e.key === "Escape") closeCtx();
+  });
+  const retheme = () => { if (state.active === "graph") Graph.rebuild(); if (state.active === "home") { Constellation.readColors(); Constellation.draw(performance.now()); } };
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  addEventListener("beforeunload", () => { for (const id of [...Store.dirty.keys()]) { clearTimeout(Store.timers.get(id)); Store.flush(id); } });
+}
+
+/* ---------- start ---------- */
+parseSeed();
+setIcons();
+bindUi();
+if (innerWidth <= 1000) $("#right").hidden = true;
+if (innerWidth <= 700) $("#left").hidden = true;
+state.tabs = ["home"]; state.active = "home";
+renderAll();
+Store.init();
+})();
+</script>
+</body>
+</html>
